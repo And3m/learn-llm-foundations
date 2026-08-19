@@ -23,4 +23,4 @@ jobs:
       - run: npm test
       - run: npm run build
         env:
-          NEXT_PUBLIC_SITE_URL: https://learn-llm-foundations.vercel.app
+          NEXT_PUBLIC_SITE_URL: https://learn-llm-foundations-phi.vercel.app

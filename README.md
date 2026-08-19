@@ -2,6 +2,8 @@
 
 An interactive, source-aligned learning companion to *Foundations of Large Language Models* by Tong Xiao and Jingbo Zhu.
 
+**Live site:** [learn-llm-foundations-phi.vercel.app](https://learn-llm-foundations-phi.vercel.app/)
+
 Learn LLM Foundations turns the book's core material into a structured web experience with 22 focused lessons, eight hands-on concept labs, section-level source references, and a searchable 57-term glossary. The course follows the complete language-model lifecycle, from pre-training objectives and BERT to prompting, alignment, efficient inference, and inference-time scaling.
 
 The project is educational and noncommercial. It is designed for readers who want explanations that stay connected to the source while making the underlying objectives, tradeoffs, and systems easier to inspect.
@@ -134,7 +136,7 @@ The workflow in `.github/workflows/ci.yml` runs the corresponding checks for pus
 1. Push the repository to GitHub.
 2. Import the repository into Vercel.
 3. Keep the detected framework as **Next.js**.
-4. Add `NEXT_PUBLIC_SITE_URL` with the final production origin.
+4. Add `NEXT_PUBLIC_SITE_URL=https://learn-llm-foundations-phi.vercel.app` for Production and Preview.
 5. Deploy.
 
 The included `vercel.json` declares the framework, and Vercel can use the standard Next.js build settings. No database, API key, server runtime service, or writable filesystem is required.
