@@ -1,0 +1,25 @@
+Model quality can improve when more computation is spent after training. Inference-time scaling expands the evidence, candidates, or reasoning paths considered for a particular request.
+
+<h2 id="scaling-context">Scale the context</h2>
+
+One approach supplies more relevant information: retrieve additional passages, inspect neighboring documents, or iteratively query for missing evidence. The goal is not maximum context length but maximum useful signal. Ranking and compression keep irrelevant text from distracting the model.
+
+Context scaling works especially well when knowledge exists externally and can be cited. It is less useful when the core difficulty is a novel deduction rather than missing facts.
+
+<h2 id="search-and-ensembling">Search and ensembling</h2>
+
+Sampling produces multiple candidate answers or partial solutions. A vote, reward model, verifier, or executable test selects among them. Search can branch at intermediate steps, retain promising states, and backtrack when a path fails.
+
+More samples improve the chance that at least one answer is good, but only if the generator has meaningful diversity and the selector can recognize quality. Correlated mistakes or a weak judge quickly create diminishing returns.
+
+<h2 id="thinking-paths">Generate and verify thinking paths</h2>
+
+For mathematics, code, planning, and other structured tasks, a model can propose intermediate steps and verify them incrementally. Process reward models score partial trajectories; external checkers execute code or validate constraints; self-refinement critiques and repairs a draft.
+
+The compute budget can be adaptive. Easy requests return after one pass; uncertain or high-value requests trigger retrieval, additional samples, or stronger verification. This turns serving into a policy for allocating computation, not merely a fixed decoder.
+
+<Callout title="The verifier is the leverage point">
+  <p>Generating many answers is useful only when the system can select better ones. Whenever possible, ground selection in tests, sources, or independently trained evaluators.</p>
+</Callout>
+
+<SourceNote pages="234–244" />

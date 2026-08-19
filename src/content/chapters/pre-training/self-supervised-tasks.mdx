@@ -1,0 +1,55 @@
+import { ObjectiveExplorer } from "@/components/simulators/objective-explorer"
+
+Self-supervised tasks turn plain text into a vast labeled dataset. The trick is to split information the model can see from information it must predict. Different splits encourage different capabilities.
+
+<h2 id="labels-from-text">Labels from text</h2>
+
+Suppose a sequence is $x = (x_1, x_2, \ldots, x_m)$. A causal language model predicts the next token from everything before it:
+
+$$
+\Pr_\theta(x) = \prod_{i=1}^{m} \Pr_\theta(x_i \mid x_1, \ldots, x_{i-1})
+$$
+
+No annotator is needed. Each observed token becomes the target for its preceding context. A masked objective instead selects positions $M$, corrupts those tokens, and asks the model to recover the originals:
+
+$$
+\mathcal{L}_{\mathrm{MLM}} = -\sum_{i \in M} \log \Pr_\theta(x_i \mid x_{\setminus M})
+$$
+
+The choice is not cosmetic. It determines what information the network may use during learning and which outputs it naturally produces afterward.
+
+<h2 id="three-objectives">Three objective families</h2>
+
+### Decoder-only: continue from the left
+
+A decoder-only Transformer uses a causal attention mask. Position $i$ cannot inspect positions to its right, so the training setup matches generation: predict the next token, append it, and repeat. GPT-style language models follow this pattern.
+
+### Encoder-only: fill in the missing evidence
+
+An encoder can inspect both sides of a position. Masked language modeling hides selected tokens and asks the network to recover them using bidirectional context. The resulting vectors are especially useful when an application needs to understand a complete input rather than generate a continuation.
+
+### Encoder-decoder: transform one sequence into another
+
+An encoder reads a complete, often corrupted input. A decoder then generates a target sequence autoregressively. Span corruption—remove a contiguous phrase and generate it back—teaches both understanding and conditional generation.
+
+<ObjectiveExplorer />
+
+<Callout title="Architecture follows access">
+  <p>A training target only works if the attention pattern permits the right evidence. Causal models hide the future; masked encoders hide selected content; encoder-decoders separate reading from generation.</p>
+</Callout>
+
+<h2 id="choosing-an-objective">Choosing an objective</h2>
+
+No objective dominates every application.
+
+| Goal | Natural starting point | Why |
+| --- | --- | --- |
+| Open-ended generation | Decoder-only | Training and inference both predict the next token |
+| Classification or retrieval | Encoder-only | Every representation can use both left and right context |
+| Translation or rewriting | Encoder-decoder | The input and generated output have distinct roles |
+
+Modern systems blur these lines through prompting and fine-tuning, but the pre-training objective still creates an architectural bias. It affects memory use, inference behavior, and how easily the model adapts to a particular kind of task.
+
+The objective also shapes efficiency. A masked encoder predicts only chosen positions but processes the full sequence in parallel. A decoder supplies a target at almost every position, but generation later proceeds one token at a time.
+
+<SourceNote pages="7–20" />

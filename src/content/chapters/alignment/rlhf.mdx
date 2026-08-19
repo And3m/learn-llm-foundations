@@ -1,0 +1,27 @@
+Reinforcement learning from human feedback (RLHF) converts human comparisons into a learned reward, then updates the language model to receive more of that reward.
+
+<h2 id="preference-data">Preference data</h2>
+
+For a prompt, annotators compare two or more candidate responses. Pairwise comparisons are often easier and more consistent than assigning an absolute score. The result is a chosen response $y^+$ and a rejected response $y^-$.
+
+The collection protocol matters: candidates should expose meaningful differences; guidelines should define the desired behavior; disagreement should be measured rather than hidden. Rankings can reflect helpfulness, harmlessness, correctness, or a combined policy.
+
+<h2 id="reward-model">Reward modeling</h2>
+
+A reward model $r_\phi(x,y)$ assigns a scalar score to a prompt-response pair. It is trained so that the chosen response receives a higher score, commonly with a logistic comparison loss:
+
+$$
+-\log \sigma\left(r_\phi(x,y^+) - r_\phi(x,y^-)\right)
+$$
+
+The model learns relative preference, not an objective measure of truth. If it finds a spurious shortcut—verbosity, confident tone, or familiar phrasing—the policy may exploit that shortcut.
+
+<h2 id="policy-optimization">Policy optimization</h2>
+
+Reinforcement learning samples responses from the current policy and adjusts it toward higher predicted reward. A penalty for drifting from a reference model keeps the update near a capable language policy. This balances two goals: improve preference reward while preserving fluency and diversity.
+
+RLHF is operationally demanding. It combines generation, reward scoring, policy updates, and careful stability controls. It can also over-optimize an imperfect reward model, so held-out human evaluation is essential.
+
+> The reward model is a proxy learned from limited comparisons. High reward means “looks preferred to this model,” not “is universally correct.”
+
+<SourceNote pages="172–186" />

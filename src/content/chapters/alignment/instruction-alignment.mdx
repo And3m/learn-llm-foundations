@@ -1,0 +1,27 @@
+Instruction alignment begins with supervised fine-tuning (SFT): continue training a pre-trained model on pairs of instructions and desired responses. It is ordinary next-token training applied to a carefully constructed conversational distribution.
+
+<h2 id="supervised-fine-tuning">Supervised fine-tuning</h2>
+
+For an instruction $x$ and target response $y$, SFT maximizes $P(y\mid x)$. Usually the loss is applied to response tokens rather than asking the model to reproduce the user’s message. Multi-turn examples teach how roles and earlier context affect later answers.
+
+SFT gives the model a strong initial policy for following requests. It is simpler and more stable than reinforcement learning, so it normally precedes preference optimization.
+
+<h2 id="instruction-data">Instruction data</h2>
+
+Data can be written by experts, transformed from existing NLP datasets, or generated and filtered with stronger models. Quality matters more than raw volume once the model learns the general interaction pattern.
+
+A useful mixture covers task families, difficulty levels, output styles, refusals, uncertainty, and conversational follow-ups. Diversity reduces the chance that “follow instructions” collapses into one narrow response template.
+
+Synthetic data improves coverage cheaply, but it can reproduce the teacher’s mistakes and stylistic habits. Filtering, human review, and independent evaluation remain important.
+
+<h2 id="generalization">Generalization and weak supervision</h2>
+
+The goal is not to memorize seen instructions; it is to infer the underlying task from new wording. Generalization improves when demonstrations span many tasks and make the intended behavior internally consistent.
+
+Weak-to-strong methods ask whether feedback from a weaker supervisor can improve a stronger model. This matters because humans cannot reliably solve or inspect every problem a capable model may face. Techniques such as decomposition, debate, verification, and process supervision try to make hard outputs easier to judge.
+
+<Callout title="SFT’s durable role">
+  <p>Preference optimization can refine a policy, but SFT establishes the basic language of interaction: respond to the instruction, observe roles, and produce the expected form.</p>
+</Callout>
+
+<SourceNote pages="157–171" />

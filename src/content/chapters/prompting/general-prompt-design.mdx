@@ -1,0 +1,34 @@
+import { PromptBuilder } from "@/components/simulators/prompt-builder"
+
+A prompt is the input $x$ that conditions a model’s output distribution $P(y\mid x)$. Good prompt design reduces ambiguity about the task, supplies information the model cannot infer, and makes the expected answer easy to recognize.
+
+<h2 id="prompt-anatomy">Prompt anatomy</h2>
+
+A robust prompt often separates four roles:
+
+1. **Instruction** — the action and success criteria.
+2. **Context** — facts, constraints, or source material.
+3. **Examples** — demonstrations of the mapping from input to output.
+4. **Output contract** — format, length, tone, or schema.
+
+Clear boundaries matter. Delimiters, headings, or structured fields help distinguish source text from instructions. Ask for only the constraints that matter: unnecessary prose can hide the signal.
+
+<PromptBuilder />
+
+<h2 id="in-context-learning">In-context learning</h2>
+
+In-context learning places examples in the prompt without updating model parameters. A **zero-shot** prompt gives only instructions; a **one-shot** or **few-shot** prompt adds demonstrations. Examples can communicate subtle label meanings, formatting, and edge-case behavior more efficiently than a long verbal description.
+
+Example choice and order can change results. Demonstrations should be correct, representative, and consistent. Include difficult boundaries when those boundaries define the task, but avoid a prompt so long that examples crowd out the actual evidence.
+
+<h2 id="design-checklist">A practical checklist</h2>
+
+- State the task with an observable verb: classify, extract, compare, rewrite.
+- Put authoritative context close to the question and identify it as data.
+- Demonstrate the exact output format when machine parsing matters.
+- Specify what to do when evidence is missing.
+- Test paraphrases and adversarial inputs, not just one happy path.
+
+Prompting does not guarantee truth. If the answer depends on private or current facts, connect the model to a trustworthy source and require the output to stay grounded in it.
+
+<SourceNote pages="97–114" />

@@ -1,0 +1,40 @@
+import { AdaptationExplorer } from "@/components/simulators/adaptation-explorer"
+
+A pre-trained encoder produces contextual representations, not a final answer for every application. Applying BERT means connecting those representations to a task and deciding how much of the backbone to update.
+
+<h2 id="task-heads">Give the representation a task</h2>
+
+The task head is deliberately small. It translates BERT’s general representation into the output shape an application needs.
+
+- **Sequence classification** reads a pooled or special-token representation and predicts one label for the input.
+- **Token classification** maps every contextual token vector to a tag, useful for named entities or grammatical labels.
+- **Extractive question answering** predicts start and end positions inside a passage.
+- **Sentence-pair tasks** encode two segments together so the output can model their relationship.
+
+The backbone stays structurally the same. Only the input convention, task head, training data, and update strategy change.
+
+<h2 id="adaptation-strategies">Three adaptation strategies</h2>
+
+**Feature extraction** freezes BERT. Representations are computed once or on demand, and a separate model learns from them. This is inexpensive and stable, but the representations cannot reorganize around the new task.
+
+**Partial fine-tuning** updates the task head and a subset of upper layers. Earlier layers retain broad patterns while later layers specialize. It is a useful compromise when compute or labeled data is limited.
+
+**Full fine-tuning** updates the entire network with a small learning rate. It offers the most flexibility but consumes more memory, can overfit small datasets, and risks damaging capabilities if training is poorly controlled.
+
+<AdaptationExplorer />
+
+<h2 id="practical-choice">A practical decision</h2>
+
+Start with the lightest method that can express the task.
+
+1. Use frozen features when data is scarce, latency permits a fixed encoder, and the task is close to information already represented.
+2. Unfreeze upper layers when the task needs more specialization but full training is unnecessarily expensive.
+3. Fine-tune the whole model when you have enough representative data, careful validation, and a meaningful quality gap to close.
+
+<Callout title="The data still decides">
+  <p>Fine-tuning cannot rescue a dataset that misrepresents production. A smaller, well-matched dataset can be more useful than a large collection of noisy or shifted examples.</p>
+</Callout>
+
+The model checkpoint, tokenizer, input template, and preprocessing rules form one unit. A mismatch between them can make a correctly trained backbone appear broken.
+
+<SourceNote pages="30–34" />

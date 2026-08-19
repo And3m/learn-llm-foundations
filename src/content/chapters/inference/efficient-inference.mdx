@@ -1,0 +1,25 @@
+Efficient serving avoids repeating work and keeps expensive accelerators busy. Caching, batching, and parallelization attack different bottlenecks, so production systems combine them.
+
+<h2 id="kv-caching">KV caching</h2>
+
+Self-attention derives keys and values for every token. During autoregressive generation, all earlier tokens remain unchanged. A KV cache stores their layer-by-layer keys and values so each decoding step computes only the new token’s state.
+
+The cache saves arithmetic but consumes memory proportional to sequence length, layers, and key/value heads. Multi-query or grouped-query attention reduces this footprint by sharing KV heads. Prefix caching can reuse states for identical system prompts or document prefixes across requests.
+
+Cache managers allocate blocks, reclaim finished sequences, and sometimes evict or compress old states. Fragmentation and unpredictable sequence lengths make this a scheduling problem, not just a tensor.
+
+<h2 id="batching">Batching</h2>
+
+Batching combines requests so matrix operations are large enough to use the accelerator efficiently. Static batches wait for every sequence to finish, wasting work when lengths differ. Continuous batching removes completed requests and inserts new ones between decoding steps.
+
+Larger batches usually improve throughput but compete for cache memory and can increase queueing delay. Schedulers may separate long prefills from latency-sensitive decodes or prioritize requests by service class.
+
+<h2 id="parallelism">Parallelism</h2>
+
+If one device cannot hold the model or meet demand, inference can use tensor, pipeline, or data parallelism. Tensor parallelism splits operations within a layer; pipeline parallelism divides layers; data parallel replicas serve independent traffic.
+
+Speculative decoding adds a different kind of parallelism: a smaller draft model proposes several tokens, and the target model verifies them together. Accepted tokens reduce the number of sequential target-model steps without changing its distribution.
+
+> Optimization is workload-specific. Measure prompt lengths, output lengths, arrival patterns, latency targets, and memory pressure before choosing a serving design.
+
+<SourceNote pages="222–233" />

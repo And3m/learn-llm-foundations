@@ -1,0 +1,29 @@
+Alignment adds targeted behavioral signals after broad pre-training. Demonstrations teach a basic response policy; comparisons express relative preferences; reward or direct objectives push the model toward preferred behavior.
+
+<h2 id="mental-model">The chapter in one mental model</h2>
+
+$$
+\text{pre-trained model}
+\xrightarrow{\text{demonstrations}} \text{instruction policy}
+\xrightarrow{\text{preferences}} \text{aligned policy}
+$$
+
+The second arrow may pass through a reward model and reinforcement learning, or use a direct preference objective.
+
+<h2 id="method-guide">Method guide</h2>
+
+| Signal | Common method | Main limitation |
+| --- | --- | --- |
+| Ideal responses | SFT | Expensive demonstrations; imitation only |
+| Chosen vs. rejected | RLHF | Reward-model and RL complexity |
+| Chosen vs. rejected | DPO | Sensitive to data and reference policy |
+| Critiques or principles | Synthetic feedback | Can reproduce evaluator blind spots |
+| Verifiable intermediate steps | Process/inference-time alignment | Additional labels or serving compute |
+
+Alignment objectives are surrogates. Independent evaluation, disagreement analysis, and monitoring remain part of the method.
+
+<h2 id="next">What comes next</h2>
+
+An aligned model still has to answer quickly and economically. [Chapter 5](/chapters/inference) follows a request through prefilling, decoding, caches, batches, and inference-time computation.
+
+<SourceNote pages="201–202" />

@@ -1,0 +1,47 @@
+import { BertMaskingLab } from "@/components/simulators/bert-masking-lab"
+
+BERT is a useful worked example: its training recipe connects a simple corruption rule to a broadly reusable encoder. It is a stack of Transformer encoder blocks trained to restore information hidden from a sentence.
+
+<h2 id="standard-bert">The standard model</h2>
+
+Input text is tokenized, decorated with special markers, and mapped to vectors. Each position combines three kinds of information:
+
+- a **token embedding** identifying the token,
+- a **position embedding** locating it in the sequence, and
+- a **segment embedding** distinguishing paired sequences when needed.
+
+The sequence passes through repeated encoder blocks. Self-attention lets every visible position contribute to every other position, and the final contextual vectors feed the pre-training objectives or a downstream task head.
+
+In masked language modeling, a subset of tokens is selected for prediction. The model sees a corrupted sequence but the loss is computed against the original tokens. The classic recipe does not replace every selected token with the literal mask marker: some remain unchanged and some become random tokens. This reduces the gap between pre-training—where a special mask exists—and later use, where it usually does not.
+
+<Callout title="Representation, not lookup">
+  <p>The vector for a word is not fixed after it enters BERT. Repeated attention layers make it depend on the entire visible sentence, so the same token can represent different meanings in different contexts.</p>
+</Callout>
+
+<h2 id="masking-lab">Masking lab</h2>
+
+Bidirectional context is most intuitive when you remove a word. The token to the left narrows the grammar; the tokens to the right narrow both grammar and meaning. Together they can make one completion far more plausible than the alternatives.
+
+<BertMaskingLab />
+
+The simulator uses illustrative values, but the flow matches the real objective: contextual vectors pass through a vocabulary projection and softmax, producing a distribution over candidate tokens.
+
+<h2 id="variants">Scale, efficiency, and languages</h2>
+
+The original BERT work established two widely reused sizes. Larger variants increased layers, hidden dimensions, and attention heads. Later work explored three directions.
+
+### More training and larger models
+
+Better data, longer schedules, and larger parameter counts improved quality, showing that the initial training recipe had not exhausted the architecture.
+
+### More efficient models
+
+Distillation teaches a smaller student to imitate a larger teacher. Parameter sharing and factorized embeddings reduce redundancy. These methods aim to preserve useful representations while lowering memory and compute cost.
+
+### Multilingual models
+
+A shared subword vocabulary and multilingual corpus allow one encoder to support many languages. Shared parameters can transfer patterns between languages, particularly when one language has less labeled data, though vocabulary and data imbalance introduce trade-offs.
+
+> BERT’s lasting lesson is not one exact model size. It is the combination of bidirectional encoding, a scalable self-supervised target, and a backbone that can be adapted many ways.
+
+<SourceNote pages="21–29" />

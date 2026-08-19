@@ -1,0 +1,30 @@
+Inference turns a trained model into a responsive service. Prefilling processes the prompt; decoding emits tokens sequentially; the serving system manages cached state, request batches, parallel devices, and quality-enhancing computation.
+
+<h2 id="mental-model">The chapter in one mental model</h2>
+
+$$
+\text{request} \xrightarrow{\text{prefill}} \text{KV state}
+\xrightarrow{\text{decode + schedule}} \text{response}
+$$
+
+The first phase rewards parallel compute. The second repeatedly moves cached state and must respect token dependencies.
+
+<h2 id="tradeoffs">Core trade-offs</h2>
+
+| Technique | Primary benefit | Main cost |
+| --- | --- | --- |
+| KV caching | Avoid repeated attention computation | Memory grows with context |
+| Continuous batching | Higher utilization and throughput | Scheduling and latency pressure |
+| Model parallelism | Fit or accelerate large models | Communication overhead |
+| Speculative decoding | Fewer sequential target steps | Draft and verification work |
+| Inference-time search | Better chance of a correct answer | More tokens and evaluator calls |
+
+Optimize for the metric users feel. TTFT, inter-token latency, total latency, and throughput can move in different directions.
+
+<h2 id="continue">Continue learning</h2>
+
+The five chapters now form one lifecycle: [pre-training](/chapters/pre-training) learns reusable structure, [generative modeling](/chapters/generative-models) scales it, [prompting](/chapters/prompting) supplies task context, [alignment](/chapters/alignment) shapes behavior, and inference delivers the result.
+
+Use the [glossary](/glossary) as a cross-chapter reference or return to any lab to explore a trade-off directly.
+
+<SourceNote pages="245–246" />

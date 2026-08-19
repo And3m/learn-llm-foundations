@@ -1,0 +1,29 @@
+Prompting controls a model by constructing its input. It can define a task, demonstrate behavior, provide evidence, allocate reasoning steps, or expose external capabilities without changing the base parameters.
+
+<h2 id="mental-model">The chapter in one mental model</h2>
+
+$$
+\text{instruction} + \text{context} + \text{examples} + \text{tools}
+\longrightarrow P(\text{response}\mid\text{prompt})
+$$
+
+Every addition should answer a concrete uncertainty: what to do, what facts to use, what a good answer looks like, or where to obtain missing information.
+
+<h2 id="method-guide">Choose the lightest sufficient method</h2>
+
+| Need | Start with |
+| --- | --- |
+| Clear task and format | Direct instruction plus output contract |
+| Subtle mapping | A few representative examples |
+| Multi-step problem | Decomposition or deliberate reasoning |
+| Current/private facts | Retrieval with grounding |
+| Exact computation/action | A validated tool call |
+| More robust candidate selection | Sampling plus verification |
+
+Measure prompts on representative cases and treat retrieved text and tool output as potentially untrusted input.
+
+<h2 id="next">What comes next</h2>
+
+Prompts steer behavior per request. [Chapter 4](/chapters/alignment) asks how desired behavior can be learned more persistently from demonstrations and human preferences.
+
+<SourceNote pages="153" />

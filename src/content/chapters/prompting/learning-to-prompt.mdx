@@ -1,0 +1,29 @@
+Prompt design can itself be treated as a learning problem. Instead of writing one prompt by intuition, define a candidate space, a performance measure, and a strategy that searches for better candidates.
+
+<h2 id="prompt-optimization">Prompt optimization</h2>
+
+Discrete prompt optimization searches over human-readable instructions or demonstrations. A model may propose variants; an evaluator scores them on a development set; search retains or mutates the strongest candidates.
+
+Three ingredients determine whether this is useful:
+
+- The **search space** must contain meaningful alternatives.
+- The **metric** must reflect the deployed objective rather than a convenient proxy.
+- The **evaluation set** must be large and varied enough to discourage overfitting.
+
+Optimized prompts should still be inspected. A candidate can exploit quirks in the judge or dataset while becoming less robust elsewhere.
+
+<h2 id="soft-prompts">Soft prompts</h2>
+
+A soft prompt is a learned sequence of continuous vectors prepended to the model input. Gradient descent tunes these vectors while the base model can remain frozen. Related parameter-efficient methods learn small adapters or low-rank updates.
+
+Soft prompts can specialize behavior with few trainable parameters, but they are not naturally readable. They also depend on a particular model and embedding space, unlike a text instruction that can be moved between systems.
+
+<h2 id="prompt-compression">Prompt compression</h2>
+
+Long prompts increase latency, attention cost, and cache memory. Compression removes redundant demonstrations, summarizes context, or selects only the passages most relevant to the current query.
+
+Compression is successful when it preserves **task-relevant information**, not when it merely minimizes token count. Evaluate the complete pipeline: a cheap compressed prompt that frequently omits decisive evidence is not efficient in practice.
+
+> Prompt learning shifts effort from manually choosing words to designing an objective and evaluation loop. The quality of that loop becomes the limiting factor.
+
+<SourceNote pages="138–152" />

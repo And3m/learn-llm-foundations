@@ -1,0 +1,25 @@
+Later alignment methods improve the feedback signal, simplify optimization, or move part of alignment to generation time. The shared goal is to learn preferences without overfitting a fragile proxy.
+
+<h2 id="better-feedback">Better feedback and reward models</h2>
+
+Reward modeling can use richer rankings, multiple preference dimensions, ensembles, uncertainty estimates, and adversarially selected examples. Process supervision scores intermediate steps rather than only the final answer, making it harder for a lucky conclusion to hide broken reasoning.
+
+Rejection sampling is a simple baseline: generate several candidates, score them, and keep the best. The selected responses can become a new supervised dataset. This avoids online policy optimization but is limited by the candidate distribution and the quality of the scorer.
+
+<h2 id="direct-preference-optimization">Direct preference optimization</h2>
+
+Direct preference optimization (DPO) trains the language model directly on chosen/rejected pairs. Its objective increases the relative probability of the chosen response while using a reference policy to control drift. There is no separately deployed reward model in the training loop and no online reinforcement-learning rollout.
+
+DPO is simpler and often stable, but it still inherits preference-data bias, reference-model choices, and objective hyperparameters. “Direct” does not mean assumption-free.
+
+<h2 id="automatic-and-stepwise">Automatic and stepwise alignment</h2>
+
+Strong models can generate critiques, revisions, or preference labels from a written set of principles. This scales feedback, especially for rare safety cases, but requires checks against self-reinforcing errors.
+
+At inference time, a system can sample, verify, revise, or search through reasoning paths before returning an answer. This spends compute only when needed and can enforce constraints that are easy to check. Training-time and inference-time alignment are complementary: one changes the policy; the other selects behavior for a particular request.
+
+<Callout title="Evaluate the full loop">
+  <p>Inspect who supplied the preference, what the scorer rewards, how far the policy moved, and whether independent evaluators observe the intended improvement.</p>
+</Callout>
+
+<SourceNote pages="187–200" />

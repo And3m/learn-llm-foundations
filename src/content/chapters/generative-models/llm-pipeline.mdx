@@ -1,0 +1,38 @@
+import { ScalingExplorer } from "@/components/simulators/scaling-explorer"
+
+A large language model is not a different species of model. It is a language model whose capacity, data, and computation are large enough to support broad transfer. Most modern LLMs use a **decoder-only Transformer** and learn by predicting the next token.
+
+<h2 id="probability-to-text">From probability to text</h2>
+
+For a sequence $x_1, \ldots, x_T$, the chain rule factors its probability into next-token predictions:
+
+$$
+P(x_1,\ldots,x_T)=\prod_{t=1}^{T}P(x_t\mid x_{<t})
+$$
+
+Training raises the probability of tokens that actually occur. Generation runs the same conditional model repeatedly: choose a token, append it to the context, and predict again. The sampling rule determines whether that loop is conservative or diverse.
+
+<Callout title="One mechanism, many behaviors">
+  <p>Completion, question answering, summarization, and code generation all use the same conditional distribution. Their differences come from the prompt, adaptation, and decoding policy.</p>
+</Callout>
+
+<h2 id="training-pipeline">The training pipeline</h2>
+
+A practical LLM pipeline has several stages:
+
+1. **Pre-training** learns broad statistical structure from a large text collection.
+2. **Continued or domain training** shifts the model toward a field such as code, law, or medicine.
+3. **Instruction tuning** supplies demonstrations of desired request-response behavior.
+4. **Preference alignment** favors responses people judge more helpful or safe.
+
+Each later stage uses less data but a more targeted signal. This is why model behavior cannot be inferred from architecture alone: two models with similar backbones may have very different data and alignment histories.
+
+<ScalingExplorer />
+
+<h2 id="using-the-model">Using the model</h2>
+
+At use time, the model can be controlled without changing its weights. A prompt supplies instructions and evidence; retrieval can add current documents; tools can execute actions or calculations. Fine-tuning remains useful when a stable behavior must be learned across many requests.
+
+The key mental shift is to see the final assistant as a **system** around a probability model. Tokenization, context construction, safety policies, retrieval, decoding, and serving infrastructure all affect the result users observe.
+
+<SourceNote pages="37–55" />

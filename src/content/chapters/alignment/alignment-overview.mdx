@@ -1,0 +1,30 @@
+import { PreferenceLab } from "@/components/simulators/preference-lab"
+
+Pre-training rewards the model for predicting text that appears in its corpus. A useful assistant has a different objective: understand an instruction, provide a helpful answer, avoid harmful behavior, and express uncertainty appropriately. Alignment methods try to close this **objective gap**.
+
+<h2 id="objective-gap">The objective gap</h2>
+
+Next-token likelihood is measurable at enormous scale, but “helpful and safe” is contextual and partly subjective. A response may be factually correct yet ignore the requested format; polite yet misleading; safe in one setting and obstructive in another.
+
+Alignment therefore uses human-produced signals that are richer than raw text:
+
+- demonstrations of good responses,
+- comparisons between candidate responses,
+- critiques, principles, or step-level feedback,
+- evaluations on capabilities and risks.
+
+<PreferenceLab />
+
+<h2 id="alignment-pipeline">The alignment pipeline</h2>
+
+Supervised fine-tuning first imitates curated instruction-response examples. Preference learning then distinguishes better from worse candidates. In classic RLHF, comparisons train a reward model and reinforcement learning optimizes the language model against that score. Direct methods such as DPO learn from the comparisons without a separate reinforcement-learning loop.
+
+The aligned model remains anchored to the pre-trained model. If optimization moves too far, it can lose language quality, diversity, or useful knowledge. Regularization and reference-model constraints help preserve those capabilities.
+
+<h2 id="limits">Limits of the objective</h2>
+
+No dataset captures every user, culture, or future situation. Annotators may disagree; reward models can be exploited; harmlessness can conflict with usefulness. Alignment is therefore an ongoing empirical process, not a proof that a model shares human values.
+
+> The target is a defensible behavior policy for a stated context. Its assumptions, trade-offs, and failure modes should be evaluated explicitly.
+
+<SourceNote pages="155–156" />

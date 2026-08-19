@@ -1,0 +1,37 @@
+Pre-training is best understood as a chain of decisions, not a single algorithm. Data supplies raw evidence. An objective turns that evidence into targets. An architecture controls which evidence the model may use. Adaptation connects the learned representation to a useful output.
+
+<h2 id="mental-model">The chapter in one mental model</h2>
+
+$$
+\text{raw text} \longrightarrow \text{self-supervised target} \longrightarrow \hat{\theta} \longrightarrow \text{task adaptation}
+$$
+
+The first arrow creates supervision without manual labels. The second optimizes a general neural backbone. The last arrow specializes what was learned without repeating the entire expensive training process.
+
+The essential distinctions are:
+
+- **Supervised** targets come from an external labeler; **self-supervised** targets come from the data.
+- **Decoder-only** models naturally continue sequences; **encoder-only** models create bidirectional representations; **encoder-decoder** models transform one sequence into another.
+- **Feature extraction** freezes the backbone; **fine-tuning** moves some or all of its parameters.
+
+<h2 id="decision-guide">A compact decision guide</h2>
+
+| If you need to… | Begin with… | Then adapt by… |
+| --- | --- | --- |
+| Generate an open-ended continuation | Decoder-only pre-training | Prompting or generative fine-tuning |
+| Classify, tag, or retrieve text | Encoder-only pre-training | A task head plus selective fine-tuning |
+| Convert an input into a structured output | Encoder-decoder pre-training | Conditional generation fine-tuning |
+
+These are starting points, not laws. Large generative models can classify through prompting, and encoders can participate in generative systems. The table captures each architecture’s most direct fit.
+
+<Callout title="A durable test">
+  <p>When you encounter a new training method, ask three questions: What information is hidden? What must be predicted? Which parameters are allowed to change?</p>
+</Callout>
+
+<h2 id="next">What comes next</h2>
+
+Pre-training explains where a foundation model comes from. The next chapter of the source book follows decoder-only models into large-scale generation: data preparation, distributed training, scaling laws, long-context architectures, caches, and memory.
+
+[Continue to Chapter 2](/chapters/generative-models) to follow decoder-only models through data preparation, distributed training, scaling laws, and long-context design. You can also use the [glossary](/glossary) to test where each term fits into the full lifecycle.
+
+<SourceNote pages="35" />

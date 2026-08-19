@@ -1,0 +1,31 @@
+import { InferenceLab } from "@/components/simulators/inference-lab"
+
+LLM inference has two phases with different computational shapes. **Prefilling** processes the prompt in parallel and builds attention state. **Decoding** generates new tokens one at a time while reusing that state.
+
+<h2 id="two-phase-inference">Two-phase inference</h2>
+
+During prefilling, every prompt token passes through the model. Matrix operations are large and parallel, so the phase is often compute-bound. Its output includes the probability distribution for the first generated token and a key/value (KV) cache for earlier positions.
+
+During decoding, each step processes only the newest token but reads the cache for the full context. The operations are smaller and repeated sequentially, making memory bandwidth and scheduling central concerns. A request cannot produce token $t+1$ until token $t$ has been selected.
+
+<h2 id="decoding-algorithms">Decoding algorithms</h2>
+
+Greedy decoding chooses the highest-probability token. Beam search keeps several high-scoring partial sequences. Sampling draws from the distribution, commonly reshaped by temperature, top-$k$, or nucleus (top-$p$) filtering.
+
+There is no universally best decoder. Deterministic tasks often prefer restrained sampling; creative tasks benefit from diversity; problems with verifiable answers can generate several candidates and select among them.
+
+<h2 id="serving-metrics">Serving metrics</h2>
+
+Quality and efficiency must be measured separately. Common system metrics include:
+
+- **Time to first token (TTFT):** request arrival to first output token.
+- **Inter-token latency (ITL):** delay between streamed tokens.
+- **End-to-end latency:** time until the complete response.
+- **Throughput:** requests or tokens completed per unit time.
+- **Utilization and memory:** how effectively the hardware is used.
+
+<InferenceLab />
+
+A responsive chat system may prioritize TTFT and smooth streaming, while an offline batch job prioritizes total throughput. The workload defines the optimization target.
+
+<SourceNote pages="204–221" />

@@ -1,0 +1,50 @@
+import { ParadigmExplorer } from "@/components/simulators/paradigm-explorer"
+
+Pre-training is the stage where a model learns a reusable representation **before** it is asked to solve the task we ultimately care about. Instead of building a new neural network for every classifier, retriever, or generator, we train a common backbone once and adapt it many times.
+
+The basic model can be written as
+
+$$
+o = g(x_0, x_1, \ldots, x_m; \theta) = g_\theta(x_0, x_1, \ldots, x_m)
+$$
+
+Here, the token sequence $x$ enters a neural network whose parameters are $\theta$, and $o$ is whatever output the task needs: a token distribution, a sequence representation, or a vector for every position.
+
+<h2 id="the-two-problems">The two problems</h2>
+
+Every pre-training method has to answer two separate questions.
+
+1. **How should the parameters be learned?** The training objective cannot depend on a single downstream application. It should reward knowledge that transfers.
+2. **How should the learned model be used?** Once the backbone exists, a task may consume its representations, add a small output head, or update the backbone itself.
+
+This separation is the key design move. Pre-training concentrates the expensive, general learning in one phase. Adaptation makes the result useful with much less task-specific data.
+
+<Callout title="The reusable part">
+  <p>A foundation model is not a finished application. It is a parameterized starting point whose broad knowledge can support many applications.</p>
+</Callout>
+
+<h2 id="three-paradigms">Three sources of supervision</h2>
+
+The word *supervision* means the information that tells the model whether its output is useful. The three paradigms differ mainly in where that information originates.
+
+- **Unsupervised learning** looks for useful structure without human-provided targets. Reconstruction and clustering are familiar examples.
+- **Supervised learning** uses explicit labels such as sentiment, topic, or intent. The signal is clear, but producing labels is costly.
+- **Self-supervised learning** constructs a prediction problem from unlabeled data. The text supplies both the input and the target.
+
+<ParadigmExplorer />
+
+Self-supervision changed the scale of language learning. A large text collection no longer needs a person to annotate every sentence: the system can hide a token and ask for it back, or shift a sequence by one position and ask for the next token.
+
+<h2 id="adapting-models">From general model to specific task</h2>
+
+Pre-trained NLP backbones generally support one of two broad shapes of work.
+
+**Sequence encoding** turns a token sequence into contextual vectors. A classifier can read one special vector, while a tagging task can read one vector per token.
+
+**Sequence generation** models a probability distribution over possible output sequences. It can continue text, translate between languages, or generate an answer conditioned on an input.
+
+Adaptation can be light or extensive. At the lightest end, the backbone remains frozen and another model consumes its features. At the other end, every parameter is updated with task data. Later lessons make that trade-off visible.
+
+> Pre-training decides what knowledge is available. The architecture decides how it is expressed. Adaptation decides which parts move for the task at hand.
+
+<SourceNote pages="1–6" />

@@ -1,0 +1,30 @@
+A longer context lets a model condition on more evidence, but standard self-attention compares every token with every other token. For sequence length $n$, the attention score matrix contains $n^2$ entries. Doubling context can roughly quadruple this part of the work.
+
+<h2 id="context-bottleneck">The context bottleneck</h2>
+
+Long sequences stress three resources at different moments: training compute, activation memory during prompt processing, and cache memory during generation. A model may technically accept a long window yet still fail to retrieve or combine information across it. Context length and effective context use are separate properties.
+
+<Callout title="Capacity is not comprehension">
+  <p>A 100,000-token input limit says the model can process that many tokens. It does not prove that every relevant detail will influence the answer equally well.</p>
+</Callout>
+
+<h2 id="efficient-architectures">Efficient architectures</h2>
+
+Several families of methods reduce cost:
+
+- **Sparse or local attention** limits which token pairs interact directly.
+- **Linearized attention** rearranges or approximates attention to avoid the full quadratic matrix.
+- **Grouped-query and multi-query attention** share key/value heads across query heads, shrinking the decoding cache.
+- **Layer or state sharing** reuses information instead of storing independent states everywhere.
+
+These methods exchange unrestricted interaction for efficiency. Sparse patterns work well when important dependencies are local or can be reached through a few global connections; approximations must preserve the interactions a task actually needs.
+
+<h2 id="position-and-memory">Position and memory</h2>
+
+Attention alone does not encode order, so models add positional information. Relative schemes and rotary position embeddings (RoPE) express token offsets in ways that can extrapolate beyond the exact training lengths. Position interpolation rescales unseen long positions into a range the model has practiced.
+
+Memory can also be externalized. Recurrent summaries carry state between chunks; retrieval selects relevant passages rather than placing an entire archive in the window; cache management retains only the states most valuable for future tokens.
+
+No technique removes every trade-off. The central design question is which information must interact directly, how often, and at what serving cost.
+
+<SourceNote pages="66–93" />

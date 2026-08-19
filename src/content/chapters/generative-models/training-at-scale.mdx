@@ -1,0 +1,28 @@
+Training a useful LLM is not simply “make the network bigger.” Scale works when data, model capacity, and computation are coordinated, and when the training system can keep thousands of accelerators productively occupied.
+
+<h2 id="data-is-a-design-choice">Data is a design choice</h2>
+
+Web-scale text is abundant but uneven. A training collection is shaped by filtering, deduplication, language balance, domain mixture, quality scoring, and privacy controls. These choices influence what the model knows and whose language it represents.
+
+- **Quality** removes corrupted, repetitive, or low-information material.
+- **Diversity** prevents a narrow source from dominating the learned distribution.
+- **Bias and safety filtering** reduce some risks, but filters can introduce their own blind spots.
+- **Privacy and licensing** constrain what should enter the corpus at all.
+
+Data mixtures are therefore part of model design, not a preprocessing footnote.
+
+<h2 id="distributed-training">Distributed training</h2>
+
+One accelerator cannot hold or train the largest models efficiently. Distributed systems divide the work along several axes. Data parallelism gives workers different examples; tensor parallelism splits large matrix operations; pipeline parallelism assigns blocks of layers to stages. Optimizer state, gradients, and parameters can also be sharded.
+
+Every split trades memory relief for communication. The useful configuration depends on network bandwidth, model shape, batch size, and failure tolerance. Low-precision formats reduce memory traffic and accelerate arithmetic, while careful accumulation preserves optimization stability.
+
+<h2 id="scaling-laws">Scaling laws</h2>
+
+Empirical scaling laws relate loss to resources such as parameter count, training tokens, and compute. They are useful for forecasting: smaller experiments can indicate how much improvement a larger run may buy.
+
+The practical lesson is balance. If a large model sees too few tokens, its capacity is under-trained. If a small model sees an enormous corpus, the data budget eventually brings diminishing returns. Compute-optimal training grows both together, subject to the real goal: sometimes inference cost matters enough to justify training a smaller model for longer.
+
+> Scaling laws describe trends within an observed regime. They do not guarantee a new capability, repair poor data, or replace evaluation.
+
+<SourceNote pages="56–65" />

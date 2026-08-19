@@ -1,0 +1,27 @@
+Advanced prompting gives the model additional computation or information instead of merely rewording an instruction. The main patterns are decomposition, iterative improvement, multiple candidates, retrieval, and tool use.
+
+<h2 id="reasoning-and-decomposition">Reasoning and decomposition</h2>
+
+Chain-of-thought prompting asks for intermediate steps before a conclusion. Few-shot examples can demonstrate a reasoning pattern; a zero-shot instruction can simply request a deliberate solution. The benefit is strongest when a task requires several dependent operations.
+
+Decomposition makes that structure explicit. A hard request is split into subproblems whose outputs feed later steps. This can improve reliability and observability, but errors can also propagate. Subtasks should have checkable outputs and clear interfaces.
+
+<Callout title="Reasoning text is not proof">
+  <p>A fluent explanation may still justify a wrong answer. Verify important conclusions with evidence, executable checks, or an independent evaluator.</p>
+</Callout>
+
+<h2 id="refine-and-ensemble">Refine and ensemble</h2>
+
+Self-refinement alternates generation and critique: draft, identify defects, revise. Ensembling samples several candidates and aggregates them through voting, ranking, or a separate judge. Both spend more inference compute to increase the chance of finding a good response.
+
+These methods work only when diversity and evaluation are meaningful. Five near-identical samples add little; a judge that shares the same blind spot can select a confidently wrong answer.
+
+<h2 id="retrieval-and-tools">Retrieval and tools</h2>
+
+Retrieval-augmented generation (RAG) searches an external collection, places selected passages in the context, and asks the model to answer from that evidence. Its quality depends on indexing, query construction, ranking, context assembly, and citation—not only on generation.
+
+Tool use goes further: the model chooses a function, supplies arguments, receives a result, and continues. Calculators, databases, search engines, and business APIs can provide capabilities the model should not simulate from memory.
+
+The application must validate arguments, restrict permissions, handle failures, and distinguish untrusted tool output from higher-priority instructions. A tool-capable model is part of a security boundary.
+
+<SourceNote pages="115–137" />

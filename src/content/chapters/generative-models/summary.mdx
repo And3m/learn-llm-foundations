@@ -1,0 +1,27 @@
+An LLM begins with a simple objective—predict the next token—but becomes useful through a coordinated pipeline of data design, scalable optimization, adaptation, alignment, and inference.
+
+<h2 id="mental-model">The chapter in one mental model</h2>
+
+$$
+\text{curated tokens} + \text{model capacity} + \text{compute}
+\longrightarrow \text{pre-trained generator}
+$$
+
+The chain-rule objective makes every document a sequence of training targets. Scale improves the model only when the corpus, capacity, and system grow in a productive balance.
+
+<h2 id="tradeoffs">Core trade-offs</h2>
+
+| Design choice | What it buys | What it costs |
+| --- | --- | --- |
+| More parameters | Greater representational capacity | Training and serving memory |
+| More high-quality tokens | Broader evidence and coverage | Collection, filtering, and compute |
+| Longer context | More evidence per request | Attention and cache cost |
+| Sparse or shared attention | Cheaper long sequences | Restricted or approximate interaction |
+
+Scaling laws help forecast smooth trends; evaluation must still test capabilities, risks, and the actual deployment distribution.
+
+<h2 id="next">What comes next</h2>
+
+Once a generative model exists, the next question is how to communicate a task to it. [Chapter 3](/chapters/prompting) treats prompts as structured inputs that can provide instructions, examples, retrieved facts, and opportunities for deliberate reasoning.
+
+<SourceNote pages="94" />
