@@ -1,30 +1,25 @@
 import { PreferenceLab } from "@/components/simulators/preference-lab"
 
-Pre-training rewards the model for predicting text that appears in its corpus. A useful assistant has a different objective: understand an instruction, provide a helpful answer, avoid harmful behavior, and express uncertainty appropriately. Alignment methods try to close this **objective gap**.
+Pre-training teaches a model to predict text from a broad corpus. An assistant is judged by a different standard: whether it understands the request, provides useful and truthful help, follows legitimate constraints, and handles unsafe or uncertain situations appropriately. Alignment methods introduce training signals that better represent those desired behaviors.
 
 <h2 id="objective-gap">The objective gap</h2>
 
-Next-token likelihood is measurable at enormous scale, but “helpful and safe” is contextual and partly subjective. A response may be factually correct yet ignore the requested format; polite yet misleading; safe in one setting and obstructive in another.
+Next-token likelihood is available at enormous scale, but it rewards imitation of the training distribution rather than the intent of a particular user. Text on the web contains contradictions, low-quality answers, unsafe instructions, and many styles that are inappropriate for an assistant. A response can be probable yet unhelpful, polished yet false, or safe in one context and obstructive in another.
 
-Alignment therefore uses human-produced signals that are richer than raw text:
-
-- demonstrations of good responses,
-- comparisons between candidate responses,
-- critiques, principles, or step-level feedback,
-- evaluations on capabilities and risks.
+Alignment uses richer signals: demonstrations of desirable responses, comparisons between candidates, critiques, written principles, step-level feedback, and evaluations of capabilities and risks. These signals are still incomplete proxies. Terms such as helpfulness and harmlessness depend on context, and annotators can legitimately disagree.
 
 <PreferenceLab />
 
 <h2 id="alignment-pipeline">The alignment pipeline</h2>
 
-Supervised fine-tuning first imitates curated instruction-response examples. Preference learning then distinguishes better from worse candidates. In classic RLHF, comparisons train a reward model and reinforcement learning optimizes the language model against that score. Direct methods such as DPO learn from the comparisons without a separate reinforcement-learning loop.
+A common pipeline begins with supervised fine-tuning on instruction-response demonstrations. This teaches the conversational interface and supplies a capable initial policy. Preference data then distinguishes better responses from worse ones. Classic RLHF fits a reward model to those comparisons and uses reinforcement learning to improve the policy. Direct preference methods optimize the policy from the comparisons without a separate online reinforcement-learning loop.
 
-The aligned model remains anchored to the pre-trained model. If optimization moves too far, it can lose language quality, diversity, or useful knowledge. Regularization and reference-model constraints help preserve those capabilities.
+The aligned policy remains tied to a reference model. Moving too far can reduce fluency, diversity, or useful capabilities, so objectives often include an explicit or implicit constraint on policy drift. Evaluation must compare the resulting behavior on both target preferences and retained capabilities.
 
-<h2 id="limits">Limits of the objective</h2>
+<h2 id="limits">Limits</h2>
 
-No dataset captures every user, culture, or future situation. Annotators may disagree; reward models can be exploited; harmlessness can conflict with usefulness. Alignment is therefore an ongoing empirical process, not a proof that a model shares human values.
+No finite dataset captures every culture, user, conflict, or future deployment. A reward model can learn superficial shortcuts, a policy can exploit its scorer, and synthetic feedback can reproduce the evaluator’s blind spots. Alignment can also trade usefulness against caution or favor one group’s preferences over another’s.
 
-> The target is a defensible behavior policy for a stated context. Its assumptions, trade-offs, and failure modes should be evaluated explicitly.
+The practical target is therefore a defensible behavior policy for a stated context, not proof that a model possesses human values. Document the intended policy, measure disagreement and edge cases, red-team the full system, and monitor behavior after deployment.
 
-<SourceNote pages="155–156" />
+<SourceNote pages="155-156" />

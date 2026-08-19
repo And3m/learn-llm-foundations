@@ -1,50 +1,134 @@
 import { ParadigmExplorer } from "@/components/simulators/paradigm-explorer"
 
-Pre-training is the stage where a model learns a reusable representation **before** it is asked to solve the task we ultimately care about. Instead of building a new neural network for every classifier, retriever, or generator, we train a common backbone once and adapt it many times.
+Pre-training separates **general language learning** from **task-specific learning**. A model first learns reusable patterns from a broad dataset, then a much smaller adaptation step connects that knowledge to classification, retrieval, question answering, generation, or another downstream task.
 
-The basic model can be written as
+<Callout title="Learning objectives">
+  <p>By the end of this lesson, you should be able to separate the pre-training and adaptation problems, distinguish three sources of supervision, and explain when fine-tuning or prompting changes a pre-trained model.</p>
+</Callout>
+
+<h2 id="the-two-problems">What pre-training solves</h2>
+
+Let a sequence model be
 
 $$
 o = g(x_0, x_1, \ldots, x_m; \theta) = g_\theta(x_0, x_1, \ldots, x_m)
 $$
 
-Here, the token sequence $x$ enters a neural network whose parameters are $\theta$, and $o$ is whatever output the task needs: a token distribution, a sequence representation, or a vector for every position.
+The input $x=(x_0,\ldots,x_m)$ is a token sequence, $\theta$ is the model's parameter set, and $o$ is the output required by the current problem. Depending on the architecture, $o$ might be a distribution over the next token, one vector representing an entire sequence, or one contextual vector per token.
 
-<h2 id="the-two-problems">The two problems</h2>
+This simple notation hides two different engineering problems:
 
-Every pre-training method has to answer two separate questions.
+1. **Learn transferable parameters.** Pre-training must choose data and an objective that reward broadly useful language knowledge rather than performance on one narrow label set.
+2. **Turn the trained model into an application.** A pre-trained network is usually a component, not a complete product. It still needs a task head, fine-tuning data, a prompt, or another adaptation mechanism.
 
-1. **How should the parameters be learned?** The training objective cannot depend on a single downstream application. It should reward knowledge that transfers.
-2. **How should the learned model be used?** Once the backbone exists, a task may consume its representations, add a small output head, or update the backbone itself.
+Training every application from a random initialization repeats expensive representation learning and demands large labeled datasets. Pre-training amortizes that work. The model learns common statistical structure once, and many tasks reuse the result.
 
-This separation is the key design move. Pre-training concentrates the expensive, general learning in one phase. Adaptation makes the result useful with much less task-specific data.
+The source denotes the learned parameters by $\hat{\theta}$. This notation matters: $\theta$ is any possible setting, while $\hat{\theta}$ is the setting reached after optimizing the pre-training objective.
 
-<Callout title="The reusable part">
-  <p>A foundation model is not a finished application. It is a parameterized starting point whose broad knowledge can support many applications.</p>
+<Callout title="Foundation does not mean finished">
+  <p>A foundation model is a reusable starting point. Its representations may contain useful information, but an application still has to specify the desired input, output, loss, and evaluation criteria.</p>
 </Callout>
 
-<h2 id="three-paradigms">Three sources of supervision</h2>
+<h2 id="three-paradigms">Three supervision paradigms</h2>
 
-The word *supervision* means the information that tells the model whether its output is useful. The three paradigms differ mainly in where that information originates.
+Supervision is the signal that tells a learner which behavior should become more likely. The source separates pre-training into three paradigms according to where that signal originates.
 
-- **Unsupervised learning** looks for useful structure without human-provided targets. Reconstruction and clustering are familiar examples.
-- **Supervised learning** uses explicit labels such as sentiment, topic, or intent. The signal is clear, but producing labels is costly.
-- **Self-supervised learning** constructs a prediction problem from unlabeled data. The text supplies both the input and the target.
+### Unsupervised pre-training
+
+Unsupervised methods optimize criteria that do not use human task labels. Reconstruction, clustering, and early layer-wise pre-training are examples. Historically, this stage often supplied a useful initialization or regularization effect, but substantial supervised training was still needed afterward.
+
+### Supervised pre-training
+
+Supervised pre-training begins with labeled examples from a source task. A sequence encoder might first learn sentiment classification, then be transferred to subjectivity classification. The approach works when the tasks share useful structure, but its scale is constrained by the cost and coverage of human annotation.
+
+### Self-supervised pre-training
+
+Self-supervision creates targets from the data itself. A sentence supplies both the visible context and the token that should be recovered; a document supplies both a corrupted input and its clean reconstruction. No external annotator has to label each example.
+
+This is different from classic self-training. Self-training normally needs an initial model to generate pseudo-labels for unlabeled samples. Language-model pre-training can construct its objective directly from raw text and train from scratch.
 
 <ParadigmExplorer />
 
-Self-supervision changed the scale of language learning. A large text collection no longer needs a person to annotate every sentence: the system can hide a token and ask for it back, or shift a sequence by one position and ask for the next token.
+The practical advantage is scale. A corpus with billions of tokens becomes billions of prediction events. The prediction task may look simple, but repeated across diverse text it pressures the model to represent syntax, semantics, discourse patterns, entities, and associations that can transfer to later tasks.
 
-<h2 id="adapting-models">From general model to specific task</h2>
+| Paradigm | Pre-training data | Main benefit | Main constraint |
+| --- | --- | --- | --- |
+| Unsupervised | Unlabeled data | Learns structure or a useful initialization | Often needs extensive downstream training |
+| Supervised | Human-labeled source task | Direct, well-defined learning signal | Labels are costly and task coverage is narrow |
+| Self-supervised | Unlabeled data with generated targets | Scales to very large corpora | Learned behavior depends strongly on the constructed objective |
 
-Pre-trained NLP backbones generally support one of two broad shapes of work.
+<h2 id="model-families">Two model families</h2>
 
-**Sequence encoding** turns a token sequence into contextual vectors. A classifier can read one special vector, while a tagging task can read one vector per token.
+The source distinguishes models by the role of their output.
 
-**Sequence generation** models a probability distribution over possible output sequences. It can continue text, translate between languages, or generate an answer conditioned on an input.
+### Sequence encoding models
 
-Adaptation can be light or extensive. At the lightest end, the backbone remains frozen and another model consumes its features. At the other end, every parameter is updated with task data. Later lessons make that trade-off visible.
+An encoder maps a sequence to either one vector or a sequence of contextual vectors:
 
-> Pre-training decides what knowledge is available. The architecture decides how it is expressed. Adaptation decides which parts move for the task at hand.
+$$
+H = \operatorname{Encode}_{\hat{\theta}}(x)
+  = (h_0,h_1,\ldots,h_m)
+$$
+
+$h_0$ can act as a whole-sequence representation, while $h_i$ can represent the token at position $i$ in context. These vectors are useful inputs to classifiers, taggers, retrievers, and other prediction networks. BERT is the worked example later in this chapter.
+
+### Sequence generation models
+
+A generation model assigns probabilities to output tokens conditioned on a context. The context could be preceding tokens in a language model, a source sentence in translation, a question and passage in question answering, or an instruction supplied in a prompt.
+
+Generation models can often operate as complete text-in/text-out systems. Encoding models usually require a prediction network that converts their hidden vectors into task outputs. This difference explains why the two families are commonly adapted in different ways.
+
+<h2 id="adapting-models">Fine-tuning a pre-trained model</h2>
+
+Suppose a classifier with parameters $\omega$ consumes the output of a pre-trained encoder:
+
+$$
+\Pr_{\omega,\hat{\theta}}(\cdot\mid x)
+=
+\operatorname{Classify}_{\omega}
+\left(\operatorname{Encode}_{\hat{\theta}}(x)\right)
+$$
+
+The classifier converts the encoder representation into a distribution over labels. Before adaptation, $\omega$ has not learned the task and $\hat{\theta}$ was optimized for pre-training rather than this label set. Labeled downstream examples are therefore used to minimize a task loss.
+
+There are two important update choices:
+
+- **Freeze the encoder.** Keep $\hat{\theta}$ fixed and optimize only $\omega$. Training is cheaper and the pre-trained representation is protected, but the encoder cannot specialize.
+- **Fine-tune the encoder.** Initialize from $\hat{\theta}$ and update some or all encoder parameters together with $\omega$. This gives the system more freedom to fit the task, but uses more memory and creates overfitting or forgetting risks.
+
+The downstream dataset is normally much smaller than the pre-training corpus, so adaptation is far less expensive than learning the backbone from scratch. The benefit comes from beginning optimization in a parameter region that already represents language usefully.
+
+### Worked classification flow
+
+For a review such as “The food was excellent,” an adapted sentiment system performs four conceptual steps:
+
+1. Tokenize the text using the pre-trained model's tokenizer.
+2. Encode the sequence into contextual vectors.
+3. Pass the selected representation to the classification head.
+4. Choose the label with the highest predicted probability.
+
+The label is not stored directly in the encoder. It is produced by the combination of general representations and task-specific supervision.
+
+<h2 id="prompting-models">Prompting a generation model</h2>
+
+Prompting adapts behavior by changing the **context** rather than immediately changing model parameters. A next-token model can treat a classification problem as completion:
+
+> Review: The food was excellent. Sentiment:
+
+The generated continuation can be mapped to a label. A stronger prompt can include an explicit instruction, a fixed output vocabulary, or demonstrations showing input-output pairs.
+
+- **Zero-shot prompting** describes the task without demonstrations.
+- **Few-shot prompting** includes several demonstrations in the context.
+- **In-context learning** is the model's ability to infer the temporary task pattern from those examples without a gradient update.
+
+Prompting is flexible because one checkpoint can perform many tasks. It is not equivalent to training, however. The model's parameters remain fixed, the behavior is sensitive to wording and context length, and accurate instruction following often depends on additional alignment or fine-tuning performed before the prompt is ever seen.
+
+| Adaptation method | What changes? | Data format | Typical use |
+| --- | --- | --- | --- |
+| Frozen features | Task head only | Labeled examples | Stable, inexpensive encoder reuse |
+| Fine-tuning | Head plus some or all model parameters | Labeled examples | Strong task specialization |
+| Prompting | Input context | Instructions and optional demonstrations | Rapid reuse of a generative model |
+
+> Pre-training determines the knowledge available in the parameters. Architecture determines how that knowledge is exposed. Adaptation determines how an application asks for and reshapes it.
 
 <SourceNote pages="1–6" />

@@ -1,9 +1,10 @@
-import { GitHubIcon, LinkedInIcon, PortfolioIcon } from "./icons";
+import { BriefcaseBusiness as PortfolioIcon } from "lucide-react";
+import { GitHubIcon, LinkedInIcon } from "./icons";
 
 const profiles = [
-  { label: "LinkedIn", href: "https://www.linkedin.com/in/vijay-andem-b2092223/", icon: LinkedInIcon },
   { label: "GitHub", href: "https://github.com/And3m", icon: GitHubIcon },
   { label: "Portfolio", href: "https://vijayandem.vercel.app/", icon: PortfolioIcon },
+  { label: "LinkedIn", href: "https://www.linkedin.com/in/vijay-andem-b2092223/", icon: LinkedInIcon },
 ] as const;
 
 type ProfileLinksProps = {

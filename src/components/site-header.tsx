@@ -4,8 +4,6 @@ import { ProfileLinks } from "./profile-links";
 import { ThemeToggle } from "./theme-toggle";
 
 const links = [
-  ["Read", "/chapters/pre-training"],
-  ["Glossary", "/glossary"],
   ["Resources", "/reading"],
 ];
 

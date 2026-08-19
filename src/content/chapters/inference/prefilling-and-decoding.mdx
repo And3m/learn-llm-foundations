@@ -1,31 +1,64 @@
 import { InferenceLab } from "@/components/simulators/inference-lab"
 
-LLM inference has two phases with different computational shapes. **Prefilling** processes the prompt in parallel and builds attention state. **Decoding** generates new tokens one at a time while reusing that state.
+Inference is the process of turning a trained model and a request into generated tokens. Its two phases have different computational shapes, and the decoding rule changes the quality, diversity, and cost of the result.
+
+<Callout title="Learning objectives">
+  <ul>
+    <li>Trace a request from tokenization through prefilling and autoregressive decoding.</li>
+    <li>Compare greedy, beam, and sampling-based decoding.</li>
+    <li>Choose serving metrics that match an interactive or batch workload.</li>
+  </ul>
+</Callout>
+
+<h2 id="inference-preliminaries">Inference preliminaries</h2>
+
+The serving stack first tokenizes the prompt, constructs positions and masks, and places the request into a scheduler. The model then computes logits for the next token. A decoding policy converts those logits into a token choice, appends that token to the sequence, and repeats until a stop condition or token limit is reached.
+
+For vocabulary logits $z$, the next-token distribution is
+
+$$
+P(y_t=i \mid x,y_{<t}) = \frac{\exp(z_i)}{\sum_j \exp(z_j)}.
+$$
+
+Generation is sequential at the token boundary: token $t+1$ depends on the token selected at step $t$. Systems recover efficiency by parallelizing the work inside each step and by processing many requests together.
 
 <h2 id="two-phase-inference">Two-phase inference</h2>
 
-During prefilling, every prompt token passes through the model. Matrix operations are large and parallel, so the phase is often compute-bound. Its output includes the probability distribution for the first generated token and a key/value (KV) cache for earlier positions.
+**Prefilling** processes all prompt tokens through the Transformer. Large matrix operations run across positions in parallel, and the phase creates the attention keys and values for every layer. It ends with the distribution for the first output token.
 
-During decoding, each step processes only the newest token but reads the cache for the full context. The operations are smaller and repeated sequentially, making memory bandwidth and scheduling central concerns. A request cannot produce token $t+1$ until token $t$ has been selected.
+**Decoding** processes one newly selected token per request at each step while reading the cached keys and values for the full context. The operations are smaller and repeatedly scheduled, so memory bandwidth, cache capacity, and request coordination become central bottlenecks.
+
+Long prompts increase prefill time, while long responses increase the number of sequential decode steps. Separating these two dimensions is important when diagnosing latency or deciding which optimization matters.
 
 <h2 id="decoding-algorithms">Decoding algorithms</h2>
 
-Greedy decoding chooses the highest-probability token. Beam search keeps several high-scoring partial sequences. Sampling draws from the distribution, commonly reshaped by temperature, top-$k$, or nucleus (top-$p$) filtering.
+Greedy decoding selects the highest-probability token at every step. It is deterministic and cheap but can commit early to a locally attractive continuation. Beam search keeps several partial sequences and expands the most promising accumulated scores; it is useful for constrained sequence tasks but adds memory and compute.
 
-There is no universally best decoder. Deterministic tasks often prefer restrained sampling; creative tasks benefit from diversity; problems with verifiable answers can generate several candidates and select among them.
+Sampling preserves diversity by drawing from the next-token distribution. Temperature rescales logits,
+
+$$
+P_T(i) \propto \exp(z_i/T),
+$$
+
+where lower $T$ concentrates probability and higher $T$ flattens it. Top-$k$ sampling restricts choices to the $k$ most probable tokens, while nucleus or top-$p$ sampling keeps the smallest set whose cumulative probability reaches $p$.
+
+No decoder is universally best. Exact or low-variance tasks favor restrained choices and validation. Creative tasks need diversity. Problems with reliable verifiers can sample several candidates and select among them.
 
 <h2 id="serving-metrics">Serving metrics</h2>
 
-Quality and efficiency must be measured separately. Common system metrics include:
+System quality requires more than tokens per second:
 
-- **Time to first token (TTFT):** request arrival to first output token.
-- **Inter-token latency (ITL):** delay between streamed tokens.
-- **End-to-end latency:** time until the complete response.
-- **Throughput:** requests or tokens completed per unit time.
-- **Utilization and memory:** how effectively the hardware is used.
+| Metric | What it measures | Usually felt as |
+| --- | --- | --- |
+| Time to first token (TTFT) | Arrival to first generated token | Initial responsiveness |
+| Inter-token latency (ITL) | Delay between streamed tokens | Smoothness of output |
+| End-to-end latency | Arrival to completed response | Total wait |
+| Throughput | Tokens or requests completed per time | Fleet efficiency |
+| Goodput | Work meeting a service target | Useful capacity |
+| Memory/utilization | Resource occupancy and activity | Cost headroom |
 
 <InferenceLab />
 
-A responsive chat system may prioritize TTFT and smooth streaming, while an offline batch job prioritizes total throughput. The workload defines the optimization target.
+Interactive chat may prioritize TTFT and steady streaming. Offline evaluation may accept queueing delay to maximize throughput. Report distributions and tail latency, not only averages, because a small group of long requests can dominate user experience.
 
-<SourceNote pages="204–221" />
+<SourceNote pages="204-221" />

@@ -31,7 +31,7 @@ export function ArticleShell({ chapter, lesson, children }: { chapter: Chapter; 
         </main>
         <aside className="article-toc">
           <p className="eyebrow">On this page</p>
-          <nav>{lesson.sections.map((section) => <a key={section.id} href={`#${section.id}`}>{section.label}</a>)}</nav>
+          <nav>{lesson.sections.map((section) => <a key={section.id} href={`#${section.id}`}><span>{section.label}</span>{section.sourcePages ? <small>pp. {section.sourcePages}</small> : null}</a>)}</nav>
           <a className="source-link" href="/resources/foundations-of-large-language-models.pdf">Open source PDF</a>
         </aside>
       </div>

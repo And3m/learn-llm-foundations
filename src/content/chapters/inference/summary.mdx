@@ -1,4 +1,4 @@
-Inference turns a trained model into a responsive service. Prefilling processes the prompt; decoding emits tokens sequentially; the serving system manages cached state, request batches, parallel devices, and quality-enhancing computation.
+Inference turns a trained model into a responsive service. Prefilling processes the prompt, decoding emits tokens sequentially, and the serving system manages cached state, request batches, parallel devices, and optional quality-enhancing computation.
 
 <h2 id="mental-model">The chapter in one mental model</h2>
 
@@ -7,24 +7,30 @@ $$
 \xrightarrow{\text{decode + schedule}} \text{response}
 $$
 
-The first phase rewards parallel compute. The second repeatedly moves cached state and must respect token dependencies.
+Prefill benefits from large parallel computation. Decode repeatedly reads cached state and must respect token dependencies. Prompt length, output length, and concurrent traffic therefore stress different parts of the system.
 
-<h2 id="tradeoffs">Core trade-offs</h2>
+<h2 id="metrics-guide">Metrics guide</h2>
+
+Use TTFT for initial responsiveness, ITL for streaming smoothness, end-to-end latency for completion time, and throughput for capacity. Goodput adds a service target and counts only work completed within it. Pair systems metrics with task quality because a fast response that fails the task is not useful efficiency.
+
+Measure medians and tail percentiles under representative arrival rates and sequence lengths. An unloaded single-request benchmark does not predict online serving behavior.
+
+<h2 id="tradeoffs">Core tradeoffs</h2>
 
 | Technique | Primary benefit | Main cost |
 | --- | --- | --- |
-| KV caching | Avoid repeated attention computation | Memory grows with context |
+| KV caching | Avoid repeated attention computation | Memory grows with active context |
 | Continuous batching | Higher utilization and throughput | Scheduling and latency pressure |
 | Model parallelism | Fit or accelerate large models | Communication overhead |
 | Speculative decoding | Fewer sequential target steps | Draft and verification work |
-| Inference-time search | Better chance of a correct answer | More tokens and evaluator calls |
+| Inference-time search | Better chance of a verified answer | More tokens and evaluator calls |
 
-Optimize for the metric users feel. TTFT, inter-token latency, total latency, and throughput can move in different directions.
+Optimize for the metric the workload actually values; these quantities can move in different directions.
 
 <h2 id="continue">Continue learning</h2>
 
-The five chapters now form one lifecycle: [pre-training](/chapters/pre-training) learns reusable structure, [generative modeling](/chapters/generative-models) scales it, [prompting](/chapters/prompting) supplies task context, [alignment](/chapters/alignment) shapes behavior, and inference delivers the result.
+The five chapters form one lifecycle: [pre-training](/chapters/pre-training) learns reusable structure, [generative modeling](/chapters/generative-models) scales it, [prompting](/chapters/prompting) supplies task context, [alignment](/chapters/alignment) shapes behavior, and inference delivers the result.
 
-Use the [glossary](/glossary) as a cross-chapter reference or return to any lab to explore a trade-off directly.
+Use the [glossary](/glossary) as a cross-chapter reference or return to any lab to explore a tradeoff directly.
 
-<SourceNote pages="245–246" />
+<SourceNote pages="245-246" />

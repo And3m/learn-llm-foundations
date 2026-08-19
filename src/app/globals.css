@@ -148,7 +148,8 @@ button, input { font: inherit; }
 .article-meta { display: flex; gap: 1.2rem; margin-top: 1.4rem; color: var(--faint); font-family: var(--font-mono), monospace; text-transform: uppercase; letter-spacing: 0; font-size: .57rem; }
 .article-toc p { margin-top: 0; }
 .article-toc nav { display: grid; gap: .65rem; border-left: 1px solid var(--border); padding-left: .8rem; }
-.article-toc nav a { color: var(--muted); font-size: .68rem; line-height: 1.35; }
+.article-toc nav a { display: grid; gap: .15rem; color: var(--muted); font-size: .68rem; line-height: 1.35; }
+.article-toc nav a small { color: var(--faint); font-family: var(--font-mono), monospace; font-size: .55rem; }
 .article-toc nav a:hover { color: var(--signal); }
 .source-link { display: block; margin-top: 1.5rem; font-size: .65rem; color: var(--signal); }
 .prose { padding: 2.7rem 0 1rem; font-family: var(--font-serif), serif; font-size: 1rem; line-height: 1.83; }
@@ -163,6 +164,9 @@ button, input { font: inherit; }
 .prose blockquote { margin: 1.8rem 0; padding: .3rem 0 .3rem 1.2rem; border-left: 2px solid var(--signal); color: var(--muted); font-style: italic; }
 .prose code { padding: .15rem .35rem; border-radius: .3rem; background: var(--surface-2); font-family: var(--font-mono), monospace; font-size: .82em; }
 .prose .katex-display { overflow-x: auto; padding: 1rem 0; }
+.prose table { display: block; width: 100%; max-width: 100%; margin: 1.75rem 0; overflow-x: auto; border-collapse: collapse; font-family: var(--font-sans), sans-serif; font-size: .76rem; line-height: 1.5; }
+.prose th, .prose td { padding: .7rem .75rem; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+.prose th { background: var(--surface-2); font-weight: 650; }
 .callout { max-width: 44rem; margin: 2rem 0; padding: 1.15rem 1.25rem; border: 1px solid color-mix(in srgb, var(--signal) 35%, var(--border)); border-radius: .5rem; background: var(--signal-soft); font-family: var(--font-sans), sans-serif; }
 .callout > span { display: block; margin-bottom: .35rem; color: var(--signal); font-family: var(--font-mono), monospace; font-size: .62rem; letter-spacing: 0; text-transform: uppercase; }
 .callout p { margin: 0; font-size: .82rem; line-height: 1.55; }

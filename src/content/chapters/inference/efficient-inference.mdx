@@ -1,25 +1,31 @@
-Efficient serving avoids repeating work and keeps expensive accelerators busy. Caching, batching, and parallelization attack different bottlenecks, so production systems combine them.
+Efficient serving avoids repeated computation, keeps accelerators supplied with useful work, and distributes models or traffic when one device is insufficient. The best design follows the workload rather than a single benchmark number.
 
-<h2 id="kv-caching">KV caching</h2>
+<h2 id="more-caching">More caching</h2>
 
-Self-attention derives keys and values for every token. During autoregressive generation, all earlier tokens remain unchanged. A KV cache stores their layer-by-layer keys and values so each decoding step computes only the new token’s state.
+Autoregressive attention reuses all earlier keys and values. A key-value (KV) cache stores those layer-by-layer tensors so each decode step computes only the state for the newest token. Without it, the model would recompute the full prefix after every generated token.
 
-The cache saves arithmetic but consumes memory proportional to sequence length, layers, and key/value heads. Multi-query or grouped-query attention reduces this footprint by sharing KV heads. Prefix caching can reuse states for identical system prompts or document prefixes across requests.
+The cache trades arithmetic for memory. Its size grows with sequence length, layer count, precision, batch size, and the number of KV heads. Multi-query and grouped-query attention reduce the footprint by sharing keys and values across query heads. Paged or blocked allocation reduces fragmentation when request lengths vary.
 
-Cache managers allocate blocks, reclaim finished sequences, and sometimes evict or compress old states. Fragmentation and unpredictable sequence lengths make this a scheduling problem, not just a tensor.
+Prefix caching reuses KV state across requests with an identical system prompt or document prefix. Reuse requires exact cache-compatible tokens and careful invalidation when the model, adapters, or prompt changes. Eviction and admission policies determine whether cache memory is spent on frequently reused prefixes or active generations.
 
 <h2 id="batching">Batching</h2>
 
-Batching combines requests so matrix operations are large enough to use the accelerator efficiently. Static batches wait for every sequence to finish, wasting work when lengths differ. Continuous batching removes completed requests and inserts new ones between decoding steps.
+Batching combines requests so matrix multiplications are large enough to use accelerator capacity. A static batch begins and ends together, wasting slots when sequences have different lengths. Padding also spends compute on positions that do not contain useful tokens.
 
-Larger batches usually improve throughput but compete for cache memory and can increase queueing delay. Schedulers may separate long prefills from latency-sensitive decodes or prioritize requests by service class.
+Continuous or iteration-level batching updates the batch between decode steps: completed requests leave and waiting requests enter. This raises utilization under online traffic, but the scheduler must balance prefill work, decode latency, queueing, and available KV memory.
+
+Larger batches generally increase throughput while increasing queue delay and cache pressure. Chunked prefilling can split a very long prompt so it does not block many short decode steps. Service tiers, deadlines, and prompt/output length estimates can inform priority without starving large requests.
 
 <h2 id="parallelism">Parallelism</h2>
 
-If one device cannot hold the model or meet demand, inference can use tensor, pipeline, or data parallelism. Tensor parallelism splits operations within a layer; pipeline parallelism divides layers; data parallel replicas serve independent traffic.
+When a model does not fit or one device cannot meet demand, inference uses several forms of parallelism. **Tensor parallelism** splits operations within a layer, **pipeline parallelism** places groups of layers on different devices, and **data parallelism** replicates the model to serve independent traffic. Each introduces communication, synchronization, or idle-stage overhead.
 
-Speculative decoding adds a different kind of parallelism: a smaller draft model proposes several tokens, and the target model verifies them together. Accepted tokens reduce the number of sequential target-model steps without changing its distribution.
+Speculative decoding addresses sequential latency differently. A smaller draft model proposes several tokens, and the target model verifies them in a parallel pass. Accepted tokens advance generation by multiple positions while preserving the target distribution under the appropriate acceptance rule. Speedup depends on draft accuracy and the relative cost of drafting and verification.
 
-> Optimization is workload-specific. Measure prompt lengths, output lengths, arrival patterns, latency targets, and memory pressure before choosing a serving design.
+<h2 id="serving-remarks">Serving remarks</h2>
 
-<SourceNote pages="222–233" />
+Quantization, optimized kernels, model architecture, cache policy, batching, and parallel placement interact. A technique that helps one phase can harm another: a larger batch raises throughput but may violate TTFT, and aggressive quantization saves bandwidth but can reduce task quality.
+
+Profile real prompt lengths, output lengths, arrival patterns, hardware topology, and latency targets. Compare quality at the same serving cost, and use goodput under a service-level objective when raw throughput hides late responses.
+
+<SourceNote pages="222-233" />

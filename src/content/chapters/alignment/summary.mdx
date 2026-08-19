@@ -1,4 +1,4 @@
-Alignment adds targeted behavioral signals after broad pre-training. Demonstrations teach a basic response policy; comparisons express relative preferences; reward or direct objectives push the model toward preferred behavior.
+Alignment adds targeted behavioral signals after broad pre-training. Demonstrations teach a basic response policy; comparisons express relative preferences; reward-based or direct objectives push the model toward preferred behavior.
 
 <h2 id="mental-model">The chapter in one mental model</h2>
 
@@ -8,22 +8,27 @@ $$
 \xrightarrow{\text{preferences}} \text{aligned policy}
 $$
 
-The second arrow may pass through a reward model and reinforcement learning, or use a direct preference objective.
+The second step may use a reward model and reinforcement learning, direct preference optimization, or selected synthetic feedback. Runtime verification can further shape the response without changing model weights.
 
 <h2 id="method-guide">Method guide</h2>
 
-| Signal | Common method | Main limitation |
+| Available signal | Common method | Central limitation |
 | --- | --- | --- |
-| Ideal responses | SFT | Expensive demonstrations; imitation only |
-| Chosen vs. rejected | RLHF | Reward-model and RL complexity |
-| Chosen vs. rejected | DPO | Sensitive to data and reference policy |
-| Critiques or principles | Synthetic feedback | Can reproduce evaluator blind spots |
-| Verifiable intermediate steps | Process/inference-time alignment | Additional labels or serving compute |
+| Ideal responses | Supervised fine-tuning | Imitates demonstrations only |
+| Chosen and rejected responses | RLHF | Reward-model and RL complexity |
+| Preference pairs with a reference | DPO | Sensitive to data and reference policy |
+| Written principles or model critiques | Automatic feedback | Evaluator blind spots can compound |
+| Verifiable intermediate steps | Process supervision | More labeling and specification effort |
+| Runtime checks and candidate scores | Inference-time alignment | Additional serving cost and latency |
 
-Alignment objectives are surrogates. Independent evaluation, disagreement analysis, and monitoring remain part of the method.
+<h2 id="failure-modes">Failure modes to track</h2>
+
+Watch for reward hacking, superficial preference shortcuts, loss of useful capabilities, excessive refusal, inconsistent behavior across groups, evaluator disagreement, and performance that collapses under distribution shift. A rising training reward is not enough; use independent task metrics, human review, adversarial testing, and post-deployment monitoring.
+
+Alignment objectives are surrogates for the behavior a deployment actually needs. Their assumptions and tradeoffs should remain visible.
 
 <h2 id="next">What comes next</h2>
 
 An aligned model still has to answer quickly and economically. [Chapter 5](/chapters/inference) follows a request through prefilling, decoding, caches, batches, and inference-time computation.
 
-<SourceNote pages="201–202" />
+<SourceNote pages="201-202" />

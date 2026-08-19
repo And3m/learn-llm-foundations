@@ -1,25 +1,31 @@
-Model quality can improve when more computation is spent after training. Inference-time scaling expands the evidence, candidates, or reasoning paths considered for a particular request.
+Model quality can improve when more computation is spent after training. Inference-time scaling expands the evidence, candidates, or reasoning paths considered for a request and allocates the larger budget where it is useful.
 
-<h2 id="scaling-context">Scale the context</h2>
+<h2 id="context-scaling">Context scaling</h2>
 
-One approach supplies more relevant information: retrieve additional passages, inspect neighboring documents, or iteratively query for missing evidence. The goal is not maximum context length but maximum useful signal. Ranking and compression keep irrelevant text from distracting the model.
+One approach supplies more relevant information: retrieve additional passages, inspect neighboring documents, or iteratively query for missing evidence. Longer context is valuable only when it contains usable signal. Irrelevant or conflicting text can distract the model, increase prefill cost, and consume KV memory.
 
-Context scaling works especially well when knowledge exists externally and can be cited. It is less useful when the core difficulty is a novel deduction rather than missing facts.
+Retrieval ranking, deduplication, compression, and citation requirements help preserve evidence density. Context scaling is strongest when the answer depends on external knowledge that can be located and checked. It is less helpful when the limiting problem is a novel deduction rather than missing facts.
 
-<h2 id="search-and-ensembling">Search and ensembling</h2>
+<h2 id="search-scaling">Search scaling</h2>
 
-Sampling produces multiple candidate answers or partial solutions. A vote, reward model, verifier, or executable test selects among them. Search can branch at intermediate steps, retain promising states, and backtrack when a path fails.
+Search generates multiple partial or complete solutions and uses a score to decide which paths to extend. Best-of-$N$ sampling chooses the highest-scored candidate. Tree-based methods branch at intermediate steps, retain promising states, and backtrack when a path fails. The compute budget can be fixed or increased for uncertain and high-value requests.
 
-More samples improve the chance that at least one answer is good, but only if the generator has meaningful diversity and the selector can recognize quality. Correlated mistakes or a weak judge quickly create diminishing returns.
+Search only helps when candidate diversity creates a chance of improvement and the score correlates with real quality. Otherwise, additional branches repeat the same mistake or optimize a weak judge. Track marginal gain as the budget grows because returns usually diminish.
 
-<h2 id="thinking-paths">Generate and verify thinking paths</h2>
+<h2 id="output-ensembling">Output ensembling</h2>
 
-For mathematics, code, planning, and other structured tasks, a model can propose intermediate steps and verify them incrementally. Process reward models score partial trajectories; external checkers execute code or validate constraints; self-refinement critiques and repairs a draft.
+Ensembling aggregates independent outputs rather than selecting a single highest score. Majority vote works for discrete answers, while weighted voting, ranking, or a judge can combine richer responses. Self-consistency samples multiple reasoning paths and selects the conclusion with the strongest agreement.
 
-The compute budget can be adaptive. Easy requests return after one pass; uncertain or high-value requests trigger retrieval, additional samples, or stronger verification. This turns serving into a policy for allocating computation, not merely a fixed decoder.
+Agreement is evidence only when errors are not perfectly correlated. Models trained alike or prompted identically may share the same blind spot. Encourage meaningful diversity, normalize answers before voting, and prefer executable or source-grounded validation when available.
+
+<h2 id="thinking-paths">Thinking paths</h2>
+
+For mathematics, code, planning, and other structured tasks, a system can generate intermediate steps and verify them incrementally. Process reward models score partial trajectories; external checkers execute code or validate constraints; critique-and-revision loops repair a draft. A verifier can stop an invalid branch before spending the full generation budget.
+
+Adaptive policies reserve extra computation for hard requests. Easy inputs complete after one pass, while uncertain cases trigger more context, samples, search, or a stronger model. This turns serving into a decision about how to allocate compute, not merely which token sampler to use.
 
 <Callout title="The verifier is the leverage point">
-  <p>Generating many answers is useful only when the system can select better ones. Whenever possible, ground selection in tests, sources, or independently trained evaluators.</p>
+  <p>Generating more candidates is useful only when the system can recognize better ones. Prefer tests, grounded evidence, or independently trained evaluators over confidence alone.</p>
 </Callout>
 
-<SourceNote pages="234–244" />
+<SourceNote pages="234-244" />

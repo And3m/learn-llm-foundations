@@ -1,37 +1,91 @@
-Pre-training is best understood as a chain of decisions, not a single algorithm. Data supplies raw evidence. An objective turns that evidence into targets. An architecture controls which evidence the model may use. Adaptation connects the learned representation to a useful output.
+Pre-training is a pipeline of connected decisions. Data supplies evidence, an objective turns that evidence into targets, architecture controls which evidence is visible, optimization produces reusable parameters, and adaptation turns those parameters into a task-specific system.
 
-<h2 id="mental-model">The chapter in one mental model</h2>
+<h2 id="mental-model">The full learning pipeline</h2>
 
 $$
-\text{raw text} \longrightarrow \text{self-supervised target} \longrightarrow \hat{\theta} \longrightarrow \text{task adaptation}
+\text{raw text}
+\longrightarrow
+\text{constructed supervision}
+\longrightarrow
+\hat{\theta}
+\longrightarrow
+\text{task adaptation}
+\longrightarrow
+\text{evaluated system}
 $$
 
-The first arrow creates supervision without manual labels. The second optimizes a general neural backbone. The last arrow specializes what was learned without repeating the entire expensive training process.
+Each arrow answers a different question:
 
-The essential distinctions are:
+1. **Data:** Which languages, domains, and text patterns can the model observe?
+2. **Supervision:** What information is hidden or corrupted, and what must be predicted?
+3. **Architecture:** Can a position see left context, both directions, or an encoded source?
+4. **Optimization:** Which parameter setting minimizes the pre-training loss?
+5. **Adaptation:** Will the application freeze features, fine-tune parameters, or provide a prompt?
+6. **Evaluation:** Does the final system solve the intended task on representative data?
 
-- **Supervised** targets come from an external labeler; **self-supervised** targets come from the data.
-- **Decoder-only** models naturally continue sequences; **encoder-only** models create bidirectional representations; **encoder-decoder** models transform one sequence into another.
-- **Feature extraction** freezes the backbone; **fine-tuning** moves some or all of its parameters.
+The result is a foundation model, not a universal answer engine. Its usefulness depends on alignment between all six decisions.
 
-<h2 id="decision-guide">A compact decision guide</h2>
+<h2 id="objective-guide">Objective and architecture map</h2>
 
-| If you need to… | Begin with… | Then adapt by… |
-| --- | --- | --- |
-| Generate an open-ended continuation | Decoder-only pre-training | Prompting or generative fine-tuning |
-| Classify, tag, or retrieve text | Encoder-only pre-training | A task head plus selective fine-tuning |
-| Convert an input into a structured output | Encoder-decoder pre-training | Conditional generation fine-tuning |
+| Architecture | Typical pre-training signal | Information access | Directly suited output |
+| --- | --- | --- | --- |
+| Decoder-only | Causal next-token prediction | Left context | Open-ended continuation |
+| Encoder-only | Masked or discriminative prediction | Visible tokens on both sides | Contextual representations |
+| Encoder-decoder | Span corruption or denoising | Full source plus generated prefix | Conditional target sequence |
 
-These are starting points, not laws. Large generative models can classify through prompting, and encoders can participate in generative systems. The table captures each architecture’s most direct fit.
+The objective is more fundamental than the model label. Masked prediction can train multiple architectures, and discriminative tasks can be attached to many encoders. To understand a new method, ask:
 
-<Callout title="A durable test">
-  <p>When you encounter a new training method, ask three questions: What information is hidden? What must be predicted? Which parameters are allowed to change?</p>
+- What is the uncorrupted example?
+- What transformation creates the model input?
+- Which outputs contribute to the loss?
+- Are outputs predicted independently, in parallel, or autoregressively?
+- Which information is blocked by attention masks?
+
+<Callout title="A durable diagnostic">
+  <p>When two methods look similar, compare their probability factorization. The order and conditioning of predictions often explain more than the product name.</p>
 </Callout>
+
+<h2 id="adaptation-guide">Adaptation map</h2>
+
+Pre-training and downstream learning solve different optimization problems. The downstream head converts hidden states into the application's output space, while an update policy decides how much of the backbone may specialize.
+
+| Need | Representation to consume | Adaptation starting point |
+| --- | --- | --- |
+| One label for a text | Sequence-level vector such as $h_{\mathrm{CLS}}$ | Classification head |
+| Relation between two texts | Joint pair representation | Pair-classification head |
+| One label per token | Contextual token vectors | Sequence-labeling head |
+| Answer inside a passage | Context token vectors | Start/end span heads |
+| A transformed output sequence | Encoded source memory | Autoregressive decoder |
+| Fast task reuse with a generator | Next-token distribution | Instruction and demonstrations |
+
+Freezing preserves general representations and lowers training cost. Full fine-tuning provides more task capacity but increases memory use and risks overfitting or forgetting. Prompting changes the context rather than the checkpoint, but relies on capabilities learned during pre-training and later alignment.
+
+<h2 id="open-problems">Limits and open problems</h2>
+
+Large-scale self-supervision made powerful language systems possible, but the chapter's framework also exposes its limits.
+
+- **The objective is only a proxy.** Predicting text rewards statistical compatibility, not guaranteed truth, safety, or reasoning.
+- **Data quality matters.** Scale cannot remove bias, duplication, imbalance, or missing coverage from the training distribution.
+- **Compute is unevenly available.** Larger models and corpora increase training, memory, and deployment requirements.
+- **Adaptation can damage prior capabilities.** Small or shifted datasets can cause overfitting and catastrophic forgetting.
+- **Evaluation remains task dependent.** Lower pre-training loss does not automatically mean better production behavior.
+
+The source closes by identifying efficient learning from smaller datasets and stronger reasoning and planning as continuing research challenges. Pre-training provides the foundation, but it does not settle how intelligence should be acquired, controlled, or evaluated.
 
 <h2 id="next">What comes next</h2>
 
-Pre-training explains where a foundation model comes from. The next chapter of the source book follows decoder-only models into large-scale generation: data preparation, distributed training, scaling laws, long-context architectures, caches, and memory.
+Chapter 1 established the reusable model lifecycle:
 
-[Continue to Chapter 2](/chapters/generative-models) to follow decoder-only models through data preparation, distributed training, scaling laws, and long-context design. You can also use the [glossary](/glossary) to test where each term fits into the full lifecycle.
+$$
+\text{pre-train}
+\rightarrow
+\text{represent or generate}
+\rightarrow
+\text{adapt}
+$$
+
+Chapter 2 focuses on the decoder-only branch that underlies modern generative LLMs. It follows next-token prediction through data preparation, model scaling, distributed training, long-sequence architectures, caches, and memory.
+
+[Continue to Chapter 2](/chapters/generative-models) when you are ready to trace that generative pipeline. The [glossary](/glossary) provides quick definitions for the Chapter 1 vocabulary.
 
 <SourceNote pages="35" />

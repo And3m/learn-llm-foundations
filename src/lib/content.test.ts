@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { chapters, getAllLessons, getChapter, getLesson, getLessonNeighbors, glossary } from "./content";
 
@@ -25,10 +27,28 @@ describe("content registry", () => {
   });
 
   it("keeps glossary lesson links resolvable", () => {
+    const terms = glossary.map((entry) => entry.term);
+    expect(new Set(terms).size).toBe(terms.length);
+    expect(terms).toEqual([...terms].sort((a, b) => a.localeCompare(b)));
+
     for (const entry of glossary) {
       if (entry.chapter && entry.lesson) {
         expect(getChapter(entry.chapter), entry.term).toBeDefined();
         expect(getLesson(entry.chapter, entry.lesson), entry.term).toBeDefined();
+      }
+    }
+  });
+
+  it("keeps source metadata aligned with every MDX section anchor", () => {
+    for (const { chapter, lesson } of getAllLessons()) {
+      const source = readFileSync(
+        join(process.cwd(), "src", "content", "chapters", chapter.slug, `${lesson.slug}.mdx`),
+        "utf8",
+      );
+
+      for (const section of lesson.sections) {
+        expect(section.sourcePages, `${lesson.slug}/${section.id}`).toBeTruthy();
+        expect(source, `${lesson.slug}/${section.id}`).toContain(`id="${section.id}"`);
       }
     }
   });

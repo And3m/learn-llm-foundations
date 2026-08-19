@@ -1,29 +1,36 @@
-Prompting controls a model by constructing its input. It can define a task, demonstrate behavior, provide evidence, allocate reasoning steps, or expose external capabilities without changing the base parameters.
+Prompting shapes a model’s behavior by constructing its input. It can define the task, demonstrate a mapping, supply evidence, allocate inference-time computation, or expose tools without updating the base model.
 
 <h2 id="mental-model">The chapter in one mental model</h2>
 
 $$
 \text{instruction} + \text{context} + \text{examples} + \text{tools}
-\longrightarrow P(\text{response}\mid\text{prompt})
+\longrightarrow P(\text{response} \mid \text{prompt})
 $$
 
-Every addition should answer a concrete uncertainty: what to do, what facts to use, what a good answer looks like, or where to obtain missing information.
+Each addition should resolve a concrete uncertainty: what to do, what facts to use, what a valid answer looks like, or where missing information can be obtained.
 
-<h2 id="method-guide">Choose the lightest sufficient method</h2>
+<h2 id="method-guide">Method guide</h2>
 
 | Need | Start with |
 | --- | --- |
 | Clear task and format | Direct instruction plus output contract |
-| Subtle mapping | A few representative examples |
-| Multi-step problem | Decomposition or deliberate reasoning |
-| Current/private facts | Retrieval with grounding |
-| Exact computation/action | A validated tool call |
-| More robust candidate selection | Sampling plus verification |
+| Subtle label or mapping | Representative few-shot examples |
+| Multi-step problem | Explicit decomposition |
+| Better candidate quality | Refinement or diverse sampling |
+| Current or private facts | Retrieval with grounded citations |
+| Exact computation or action | A validated, permissioned tool |
+| Task specialization with few parameters | Soft prompts or another parameter-efficient method |
 
-Measure prompts on representative cases and treat retrieved text and tool output as potentially untrusted input.
+Choose the lightest method that satisfies the requirement. Every extra call, sample, and context token has a latency and cost consequence.
+
+<h2 id="evaluation-guide">Evaluation guide</h2>
+
+Evaluate prompts on representative held-out cases, including missing evidence, ambiguous instructions, long inputs, adversarial text, and format failures. Measure task quality together with token use, latency, parse validity, citation support, and tool safety. Re-run the suite when the model, retrieval index, or prompt template changes.
+
+Prompting steers rather than guarantees. Keep deterministic validation and permission checks outside the model wherever the application can enforce them directly.
 
 <h2 id="next">What comes next</h2>
 
-Prompts steer behavior per request. [Chapter 4](/chapters/alignment) asks how desired behavior can be learned more persistently from demonstrations and human preferences.
+Prompts control behavior per request. [Chapter 4](/chapters/alignment) examines how desired behavior can be learned more persistently from demonstrations, reward signals, and preferences.
 
 <SourceNote pages="153" />

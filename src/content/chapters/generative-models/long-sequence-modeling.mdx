@@ -1,30 +1,114 @@
-A longer context lets a model condition on more evidence, but standard self-attention compares every token with every other token. For sequence length $n$, the attention score matrix contains $n^2$ entries. Doubling context can roughly quadruple this part of the work.
+Long-context modeling asks a Transformer to process or generate sequences beyond the range where standard attention, memory, and positional representations are comfortable. The problem is not one number: training compute, prompt processing, decoding cache, retrieval quality, and position generalization fail differently.
 
-<h2 id="context-bottleneck">The context bottleneck</h2>
-
-Long sequences stress three resources at different moments: training compute, activation memory during prompt processing, and cache memory during generation. A model may technically accept a long window yet still fail to retrieve or combine information across it. Context length and effective context use are separate properties.
-
-<Callout title="Capacity is not comprehension">
-  <p>A 100,000-token input limit says the model can process that many tokens. It does not prove that every relevant detail will influence the answer equally well.</p>
+<Callout title="Learning objectives">
+  <p>Separate compute and memory bottlenecks, compare efficient-attention and memory mechanisms, explain KV sharing, and distinguish position extrapolation from interpolation.</p>
 </Callout>
+
+<h2 id="hpc-optimization">HPC optimization</h2>
+
+For sequence length $n$ and head dimension $d_h$, standard attention forms
+
+$$
+\operatorname{Attention}(Q,K,V)
+=
+\operatorname{Softmax}
+\left(\frac{QK^\top}{\sqrt{d_h}}\right)V
+$$
+
+The $n\times n$ score matrix creates quadratic work and memory pressure. Kernel-level methods reduce data movement without changing the mathematical result. Tiled attention loads blocks of $Q$, $K$, and $V$ into fast on-chip memory, performs partial softmax calculations, and avoids materializing the full score matrix in slow device memory.
+
+Sequence parallelism can also divide token positions across devices. It reduces per-device activation memory but adds communication. These high-performance-computing methods preserve dense attention; their benefit depends on hardware, kernels, precision, and sequence shape.
 
 <h2 id="efficient-architectures">Efficient architectures</h2>
 
-Several families of methods reduce cost:
+Architectural methods change which interactions are computed.
 
-- **Sparse or local attention** limits which token pairs interact directly.
-- **Linearized attention** rearranges or approximates attention to avoid the full quadratic matrix.
-- **Grouped-query and multi-query attention** share key/value heads across query heads, shrinking the decoding cache.
-- **Layer or state sharing** reuses information instead of storing independent states everywhere.
+- **Local attention** connects each token to a sliding window.
+- **Sparse attention** combines local patterns with selected global or strided links.
+- **Linearized attention** rearranges or approximates the attention kernel to avoid an explicit quadratic matrix.
+- **Chunked recurrence** passes a compressed state between segments.
 
-These methods exchange unrestricted interaction for efficiency. Sparse patterns work well when important dependencies are local or can be reached through a few global connections; approximations must preserve the interactions a task actually needs.
+Sparse patterns are effective when distant information can travel through a small number of hops or through global tokens. They can miss arbitrary long-range dependencies. Linear approximations reduce asymptotic cost but may alter the normalized interactions that make softmax attention expressive.
 
-<h2 id="position-and-memory">Position and memory</h2>
+The correct question is not “is attention linear?” but “which token pairs must exchange information directly for this workload?”
 
-Attention alone does not encode order, so models add positional information. Relative schemes and rotary position embeddings (RoPE) express token offsets in ways that can extrapolate beyond the exact training lengths. Position interpolation rescales unseen long positions into a range the model has practiced.
+<h2 id="cache-and-memory">Cache and memory</h2>
 
-Memory can also be externalized. Recurrent summaries carry state between chunks; retrieval selects relevant passages rather than placing an entire archive in the window; cache management retains only the states most valuable for future tokens.
+During autoregressive decoding, previous token representations do not change. A KV cache stores each layer's keys and values:
 
-No technique removes every trade-off. The central design question is which information must interact directly, how often, and at what serving cost.
+$$
+K_{\leq i}=[k_0,\ldots,k_i],
+\qquad
+V_{\leq i}=[v_0,\ldots,v_i]
+$$
+
+The next query attends to cached state rather than recomputing the full prefix. Arithmetic falls, but cache memory grows with layers, context length, key/value heads, head dimension, batch size, and precision.
+
+Memory mechanisms can reduce or extend this state:
+
+- **Sliding-window caches** retain only recent positions.
+- **Compressed summaries** combine older key/value pairs into a smaller representation.
+- **Recurrent memory** carries selected hidden states from earlier chunks.
+- **External datastores** retrieve representations or text using the current query.
+
+An external memory separates storage from the context window. Retrieval cost becomes sublinear in the archive, but the model only sees selected results. Retrieval quality, index freshness, and context assembly now determine what information remains available.
+
+<Callout title="Capacity is not use">
+  <p>A model accepting 100,000 tokens has enough positional and memory machinery to process them. It does not guarantee that a detail anywhere in that window will be retrieved or combined correctly.</p>
+</Callout>
+
+<h2 id="sharing-heads-layers">Sharing heads and layers</h2>
+
+Multi-head attention normally stores separate key and value projections for every query head. Two cache-saving alternatives are:
+
+- **Multi-query attention (MQA):** all query heads share one key head and one value head.
+- **Grouped-query attention (GQA):** groups of query heads share a smaller set of KV heads.
+
+If there are $n_q$ query heads and $n_{kv}$ key/value heads, KV cache size scales with $n_{kv}$ rather than $n_q$. GQA provides a compromise between full multi-head capacity and MQA's smallest cache.
+
+Sharing can also occur across layers. Reusing KV state or parameters reduces storage, but layers may need distinct representations at different abstraction levels. Savings should be measured against quality and actual memory bandwidth.
+
+| Method | KV heads | Cache saving | Flexibility |
+| --- | ---: | --- | --- |
+| Multi-head attention | $n_q$ | Baseline | Highest |
+| Grouped-query attention | $1<n_{kv}<n_q$ | Moderate to large | Balanced |
+| Multi-query attention | $1$ | Largest | Most sharing |
+
+<h2 id="position-methods">Position extension</h2>
+
+A model trained to length $n_{\mathrm{train}}$ must assign meaningful positional relationships beyond that range.
+
+### Extrapolation
+
+Extrapolation evaluates a positional function at unseen distances. Relative-position biases can bucket large distances; linear biases can continue with distance; rotary embeddings rotate query and key dimensions according to position.
+
+Extrapolation preserves the original scale but asks the model to generalize beyond values seen during training. Periodic or high-frequency components can change too rapidly at long positions.
+
+### Interpolation
+
+Position interpolation rescales a longer target window into the trained range:
+
+$$
+i' = i\frac{n_{\mathrm{train}}}{n_{\mathrm{target}}}
+$$
+
+The model sees familiar positional values, but nearby long-context tokens become closer in the interpolated coordinate system. Additional fine-tuning on long sequences usually helps it adapt.
+
+Rotary extension methods adjust frequencies or apply different scaling across dimensions. No single scaling rule is optimal across all lengths and tasks; perplexity, retrieval, and generation must be measured throughout the full window.
+
+<h2 id="long-context-remarks">Practical remarks</h2>
+
+Long context can be obtained by pre-training from scratch at long lengths or by adapting a general model later. Full long-sequence pre-training is expensive because quadratic work is paid throughout the corpus. Adaptation is cheaper but must teach position and attention mechanisms to operate outside their original regime.
+
+Use this decision sequence:
+
+1. Determine whether the problem needs long input, long output, or both.
+2. Measure dense-attention and KV-cache limits separately.
+3. Decide whether retrieval can replace raw window growth.
+4. Choose position extension and long-data tuning together.
+5. Evaluate information retrieval at multiple positions, not only end-to-end perplexity.
+6. Measure latency and memory under realistic concurrent serving.
+
+The practical objective is **effective context at acceptable cost**, not the largest advertised token limit.
 
 <SourceNote pages="66–93" />

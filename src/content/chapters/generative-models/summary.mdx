@@ -1,27 +1,46 @@
-An LLM begins with a simple objective—predict the next token—but becomes useful through a coordinated pipeline of data design, scalable optimization, adaptation, alignment, and inference.
+Chapter 2 follows a simple next-token objective into a complete LLM development system. Architecture defines the generator; data and compute determine what it learns; tuning and alignment shape its policy; memory and positional methods determine how much context it can use.
 
-<h2 id="mental-model">The chapter in one mental model</h2>
+<h2 id="mental-model">The LLM lifecycle</h2>
 
 $$
-\text{curated tokens} + \text{model capacity} + \text{compute}
-\longrightarrow \text{pre-trained generator}
+\text{curated tokens}
+\xrightarrow{\text{distributed pre-training}}
+\text{base LLM}
+\xrightarrow{\text{tuning + alignment}}
+\text{usable policy}
+\xrightarrow{\text{prompt + decoding}}
+\text{response}
 $$
 
-The chain-rule objective makes every document a sequence of training targets. Scale improves the model only when the corpus, capacity, and system grow in a productive balance.
+Every stage has a separate failure mode. Poor data cannot be repaired by parameter count alone. A low-loss base model may not follow instructions. An aligned model can still be prompted with missing evidence. A capable policy can still be served with excessive latency.
 
-<h2 id="tradeoffs">Core trade-offs</h2>
+<h2 id="scaling-balance">Scaling balance</h2>
 
-| Design choice | What it buys | What it costs |
+| Resource | Too little | More is not automatically better because |
 | --- | --- | --- |
-| More parameters | Greater representational capacity | Training and serving memory |
-| More high-quality tokens | Broader evidence and coverage | Collection, filtering, and compute |
-| Longer context | More evidence per request | Attention and cache cost |
-| Sparse or shared attention | Cheaper long sequences | Restricted or approximate interaction |
+| Parameters | Insufficient capacity | Memory and serving cost grow |
+| Tokens | Under-trained model | Low-quality repetitions waste compute |
+| Compute | Incomplete optimization | Cost and failure exposure rise |
+| Communication bandwidth | Idle accelerators | More devices can increase synchronization |
 
-Scaling laws help forecast smooth trends; evaluation must still test capabilities, risks, and the actual deployment distribution.
+Scaling laws forecast average trends inside a known regime. Compute-optimal design grows model and data together, then adjusts for deployment economics.
+
+<h2 id="long-context-map">Long-context map</h2>
+
+Long sequences introduce three distinct levers:
+
+- **Compute:** optimized kernels, sparse patterns, or approximate attention.
+- **Memory:** KV caching, KV-head sharing, compression, recurrence, or retrieval.
+- **Position:** relative bias, rotary representations, extrapolation, or interpolation.
+
+These levers interact. GQA reduces cache memory but does not remove attention over the prefix. Position interpolation extends coordinates but does not prove retrieval quality. External retrieval reduces context length but introduces ranking errors.
+
+<Callout title="Design test">
+  <p>For every long-context technique, state which resource it saves, which interactions it removes or approximates, and how quality will be measured across the window.</p>
+</Callout>
 
 <h2 id="next">What comes next</h2>
 
-Once a generative model exists, the next question is how to communicate a task to it. [Chapter 3](/chapters/prompting) treats prompts as structured inputs that can provide instructions, examples, retrieved facts, and opportunities for deliberate reasoning.
+Once a generative model exists, users still need a way to describe temporary tasks and provide request-specific evidence. [Chapter 3](/chapters/prompting) treats the prompt as a structured program containing instructions, examples, context, reasoning strategy, and tool access.
 
 <SourceNote pages="94" />

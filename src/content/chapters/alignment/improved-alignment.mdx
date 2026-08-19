@@ -1,25 +1,33 @@
-Later alignment methods improve the feedback signal, simplify optimization, or move part of alignment to generation time. The shared goal is to learn preferences without overfitting a fragile proxy.
+Later alignment methods improve the preference signal, simplify policy optimization, or move additional selection and verification to inference time. Each approach changes where complexity lives; none removes the need for representative data and independent evaluation.
 
-<h2 id="better-feedback">Better feedback and reward models</h2>
+<h2 id="better-reward-modeling">Better reward modeling</h2>
 
-Reward modeling can use richer rankings, multiple preference dimensions, ensembles, uncertainty estimates, and adversarially selected examples. Process supervision scores intermediate steps rather than only the final answer, making it harder for a lucky conclusion to hide broken reasoning.
+Reward systems can use rankings rather than isolated pairs, separate axes such as correctness and safety, ensembles of scorers, uncertainty estimates, and adversarially selected examples. Process supervision scores intermediate steps, while outcome supervision scores only the final result. Process labels can reveal a flawed derivation that happened to end correctly, though they are more expensive to collect.
 
-Rejection sampling is a simple baseline: generate several candidates, score them, and keep the best. The selected responses can become a new supervised dataset. This avoids online policy optimization but is limited by the candidate distribution and the quality of the scorer.
+Rejection sampling is a useful baseline: generate multiple responses, score them, retain the best, and optionally fine-tune on the selected set. It avoids online policy optimization but cannot select an answer the current policy never generates, and it remains limited by the scorer.
 
 <h2 id="direct-preference-optimization">Direct preference optimization</h2>
 
-Direct preference optimization (DPO) trains the language model directly on chosen/rejected pairs. Its objective increases the relative probability of the chosen response while using a reference policy to control drift. There is no separately deployed reward model in the training loop and no online reinforcement-learning rollout.
+Direct preference optimization (DPO) trains a policy directly on chosen and rejected responses. It increases the chosen response’s relative likelihood while comparing the update with a fixed reference policy. This connects the preference model and policy objective algebraically, eliminating a separately trained reward model and online RL rollouts from the training loop.
 
-DPO is simpler and often stable, but it still inherits preference-data bias, reference-model choices, and objective hyperparameters. “Direct” does not mean assumption-free.
+DPO is simpler to implement and often stable, but it still depends on preference coverage, response pair quality, the reference policy, and the strength of the divergence control. Direct optimization does not make biased labels or distribution shift disappear.
 
-<h2 id="automatic-and-stepwise">Automatic and stepwise alignment</h2>
+<h2 id="automatic-preferences">Automatic preferences</h2>
 
-Strong models can generate critiques, revisions, or preference labels from a written set of principles. This scales feedback, especially for rare safety cases, but requires checks against self-reinforcing errors.
+Strong models can generate critiques, revisions, or preference labels from written principles. Automated feedback expands rare-case coverage and reduces annotation cost. It is particularly useful when rules can be stated clearly or verified mechanically.
 
-At inference time, a system can sample, verify, revise, or search through reasoning paths before returning an answer. This spends compute only when needed and can enforce constraints that are easy to check. Training-time and inference-time alignment are complementary: one changes the policy; the other selects behavior for a particular request.
+The evaluator may share the policy’s misconceptions or favor its own style. Use human audits, multiple evaluators, disagreement sampling, and rule-based checks to prevent a self-reinforcing feedback loop. Synthetic labels should retain provenance and confidence so they can be analyzed separately.
 
-<Callout title="Evaluate the full loop">
-  <p>Inspect who supplied the preference, what the scorer rewards, how far the policy moved, and whether independent evaluators observe the intended improvement.</p>
-</Callout>
+<h2 id="stepwise-alignment">Stepwise alignment</h2>
 
-<SourceNote pages="187–200" />
+Stepwise methods supervise the process of reaching an answer. A complex task can be decomposed into checkable stages; intermediate claims can be critiqued, verified, or rewarded before the final response is produced. This improves observability and can locate the first failure rather than judging only the endpoint.
+
+It also expands the attack surface for specification errors. A prescribed process may penalize valid alternative solutions, and convincing intermediate text may still be false. Prefer verifiable steps and preserve flexibility where multiple correct methods exist.
+
+<h2 id="inference-time-alignment">Inference-time alignment</h2>
+
+Alignment can continue during generation. A system may sample several candidates, apply safety and factual checks, revise a response, call tools, or search through reasoning paths before returning an answer. This spends compute selectively and can enforce constraints that are easy to validate at runtime.
+
+Training-time and inference-time methods are complementary. Training shapes the default policy; runtime controls adapt behavior to a request and current evidence. Evaluate the complete loop, including selectors, tools, fallbacks, latency, and failure handling.
+
+<SourceNote pages="187-200" />

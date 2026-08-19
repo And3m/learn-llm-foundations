@@ -1,27 +1,49 @@
-Advanced prompting gives the model additional computation or information instead of merely rewording an instruction. The main patterns are decomposition, iterative improvement, multiple candidates, retrieval, and tool use.
+Advanced prompting allocates additional information or inference-time computation to a request. The useful patterns are ways to expose a problem’s structure, generate alternatives, check a draft, or connect the model to evidence and capabilities outside its parameters.
 
-<h2 id="reasoning-and-decomposition">Reasoning and decomposition</h2>
-
-Chain-of-thought prompting asks for intermediate steps before a conclusion. Few-shot examples can demonstrate a reasoning pattern; a zero-shot instruction can simply request a deliberate solution. The benefit is strongest when a task requires several dependent operations.
-
-Decomposition makes that structure explicit. A hard request is split into subproblems whose outputs feed later steps. This can improve reliability and observability, but errors can also propagate. Subtasks should have checkable outputs and clear interfaces.
-
-<Callout title="Reasoning text is not proof">
-  <p>A fluent explanation may still justify a wrong answer. Verify important conclusions with evidence, executable checks, or an independent evaluator.</p>
+<Callout title="Learning objectives">
+  <ul>
+    <li>Recognize when explicit reasoning and decomposition can help.</li>
+    <li>Design refinement and ensemble loops with checkable evaluators.</li>
+    <li>Connect retrieval and tools without treating their outputs as trusted instructions.</li>
+  </ul>
 </Callout>
 
-<h2 id="refine-and-ensemble">Refine and ensemble</h2>
+<h2 id="chain-of-thought">Chain-of-thought prompting</h2>
 
-Self-refinement alternates generation and critique: draft, identify defects, revise. Ensembling samples several candidates and aggregates them through voting, ranking, or a separate judge. Both spend more inference compute to increase the chance of finding a good response.
+Chain-of-thought prompting asks the model to produce intermediate reasoning before its conclusion. A few-shot prompt can demonstrate the desired reasoning pattern, while a zero-shot prompt can request a deliberate solution. This often helps tasks containing several dependent operations because the model receives more tokens over which to represent the computation.
 
-These methods work only when diversity and evaluation are meaningful. Five near-identical samples add little; a judge that shares the same blind spot can select a confidently wrong answer.
+The technique also has costs. Longer outputs increase latency, may expose irrelevant internal text, and can present a persuasive explanation for an incorrect result. Reasoning text should be treated as a candidate derivation, not proof. High-stakes answers still need executable checks, source evidence, or an independent verifier.
+
+<Callout title="Reasoning text is not proof">
+  <p>Fluency measures how plausible an explanation sounds. Verification measures whether its claims and operations are correct. Keep those two judgments separate.</p>
+</Callout>
+
+<h2 id="problem-decomposition">Problem decomposition</h2>
+
+Decomposition breaks a difficult request into smaller subproblems. In a sequential design, the output of one step becomes the input to the next. In a parallel design, independent subtasks are solved separately and combined. Least-to-most prompting begins with simpler prerequisites and progressively constructs the final answer.
+
+Good subproblems have explicit inputs, bounded outputs, and a way to detect failure. This makes the workflow observable and allows a failed step to be retried. Poor decomposition simply spreads the original ambiguity across more model calls. It can also propagate an early error, so preserve source evidence and validate intermediate results at important boundaries.
+
+A useful design test is whether each step could be assigned and checked independently. If not, the split may be procedural theater rather than a meaningful reduction in complexity.
+
+<h2 id="self-refinement">Self-refinement</h2>
+
+Self-refinement uses a loop such as **draft, critique, revise**. The critique should name defects against explicit criteria, and the revision should address those defects without discarding correct material. Separating the roles into different prompts or model calls can make the state transitions clearer.
+
+Refinement works best when quality is locally recognizable: missing requirements, unsupported claims, invalid code, or inconsistent formatting. It is less reliable when the same model cannot detect its own misconception. Limit the number of iterations, retain the best verified candidate, and stop when measured improvement plateaus.
+
+<h2 id="ensembling">Ensembling</h2>
+
+Ensembling samples multiple candidate responses and aggregates them by majority vote, confidence-weighted voting, ranking, or a separate judge. Self-consistency applies this idea to reasoning paths: generate varied solutions and choose the answer supported by the strongest agreement.
+
+The benefit depends on diversity and evaluator quality. Five nearly identical samples provide little independent evidence. Majority agreement can also amplify a shared bias, while a model judge may prefer polished language over correctness. Use task-specific checks whenever possible and compare the accuracy gain with the additional token and latency cost.
 
 <h2 id="retrieval-and-tools">Retrieval and tools</h2>
 
-Retrieval-augmented generation (RAG) searches an external collection, places selected passages in the context, and asks the model to answer from that evidence. Its quality depends on indexing, query construction, ranking, context assembly, and citation—not only on generation.
+Retrieval-augmented generation searches an external collection, ranks candidate passages, places selected evidence in the context, and asks the model to answer from that evidence. Failures can enter through indexing, query construction, ranking, context assembly, or generation. Citations help users inspect grounding, but citation presence alone does not prove that a claim follows from the cited passage.
 
-Tool use goes further: the model chooses a function, supplies arguments, receives a result, and continues. Calculators, databases, search engines, and business APIs can provide capabilities the model should not simulate from memory.
+Tool use extends the workflow: the model selects a function, produces arguments, receives a result, and continues. Calculators, databases, search systems, and business APIs provide exact or current capabilities that a model should not imitate from memory.
 
-The application must validate arguments, restrict permissions, handle failures, and distinguish untrusted tool output from higher-priority instructions. A tool-capable model is part of a security boundary.
+Applications must validate tool names and arguments, restrict permissions, time out failed operations, and distinguish untrusted results from system instructions. Retrieval text and tool output are data at a security boundary. They can inform the answer but must not silently redefine what the application is allowed to do.
 
-<SourceNote pages="115–137" />
+<SourceNote pages="115-137" />
