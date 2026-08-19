@@ -1,11 +1,5 @@
 import Link from "next/link";
-import { GitHubIcon, LinkedInIcon, PortfolioIcon } from "./icons";
-
-const profiles = [
-  { label: "LinkedIn", href: "https://www.linkedin.com/in/vijay-andem-b2092223/", icon: LinkedInIcon },
-  { label: "GitHub", href: "https://github.com/And3m", icon: GitHubIcon },
-  { label: "Portfolio", href: "https://vijayandem.vercel.app/", icon: PortfolioIcon },
-];
+import { ProfileLinks } from "./profile-links";
 
 export function SiteFooter() {
   return (
@@ -22,13 +16,7 @@ export function SiteFooter() {
         </div>
         <div className="site-footer__creator">
           <span>Created by <a href="https://vijayandem.vercel.app/" rel="noreferrer noopener" target="_blank">Vijay Andem</a></span>
-          <nav className="social-links" aria-label="Vijay Andem profiles">
-            {profiles.map(({ label, href, icon: Icon }) => (
-              <a className="social-link" href={href} key={label} rel="noreferrer noopener" target="_blank" title={label} aria-label={`Vijay Andem on ${label}`}>
-                <Icon />
-              </a>
-            ))}
-          </nav>
+          <ProfileLinks />
         </div>
       </div>
     </footer>

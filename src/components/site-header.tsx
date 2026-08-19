@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BookIcon, MarkIcon, MenuIcon } from "./icons";
+import { ProfileLinks } from "./profile-links";
 import { ThemeToggle } from "./theme-toggle";
 
 const links = [
@@ -19,14 +20,18 @@ export function SiteHeader() {
         <nav className="desktop-nav" aria-label="Primary navigation">
           {links.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
         </nav>
+        <ProfileLinks className="header-profiles" />
         <div className="header-actions">
           <ThemeToggle />
           <details className="mobile-menu">
             <summary className="icon-button" aria-label="Open navigation"><MenuIcon /></summary>
-            <nav aria-label="Mobile navigation">
-              {links.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
-              <Link href="/resources/foundations-of-large-language-models.pdf"><BookIcon /> Source PDF</Link>
-            </nav>
+            <div className="mobile-menu__panel">
+              <nav aria-label="Mobile navigation">
+                {links.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
+                <Link href="/resources/foundations-of-large-language-models.pdf"><BookIcon /> Source PDF</Link>
+              </nav>
+              <ProfileLinks variant="menu" />
+            </div>
           </details>
         </div>
       </div>

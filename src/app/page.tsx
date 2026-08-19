@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowIcon, BookIcon, MarkIcon } from "@/components/icons";
+import { ArrowIcon, GlossaryIcon, MarkIcon, PlayIcon } from "@/components/icons";
 import { chapters, getAllLessons } from "@/lib/content";
 
 export default function HomePage() {
@@ -14,8 +14,8 @@ export default function HomePage() {
             <p>From pre-training<br />to inference</p>
           </div>
           <div className="book-actions">
-            <Link className="button primary" href="/chapters/pre-training/pre-training-models">Start reading <ArrowIcon /></Link>
-            <Link className="button" href="/resources/foundations-of-large-language-models.pdf"><BookIcon /> Source PDF</Link>
+            <Link className="button primary" href="/chapters/pre-training/pre-training-models"><PlayIcon /> Start reading</Link>
+            <Link className="button" href="/glossary"><GlossaryIcon /> Glossary</Link>
           </div>
         </aside>
         <section className="home-intro">

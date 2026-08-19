@@ -14,6 +14,14 @@ export function ArrowIcon(props: IconProps) {
   return <svg {...base} {...props}><path d="M5 12h14M13 6l6 6-6 6" /></svg>;
 }
 
+export function PlayIcon(props: IconProps) {
+  return <svg {...base} {...props}><path d="m9 7 8 5-8 5V7Z" /></svg>;
+}
+
+export function GlossaryIcon(props: IconProps) {
+  return <svg {...base} {...props}><path d="M10 6h10M10 12h10M10 18h10" /><circle cx="5" cy="6" r="1" fill="currentColor" stroke="none" /><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="5" cy="18" r="1" fill="currentColor" stroke="none" /></svg>;
+}
+
 export function SunIcon(props: IconProps) {
   return <svg {...base} {...props}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42" /></svg>;
 }
