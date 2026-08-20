@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Inter, Literata } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
@@ -27,7 +28,10 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, them
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${literata.variable} ${mono.variable}`}>
-      <body><ThemeProvider><SiteHeader />{children}<SiteFooter /></ThemeProvider></body>
+      <body>
+        <ThemeProvider><SiteHeader />{children}<SiteFooter /></ThemeProvider>
+        <Analytics />
+      </body>
     </html>
   );
 }
