@@ -178,7 +178,7 @@ An NER system can use BIO labels:
 
 BERT uses WordPiece tokens. But annotated datasets often label full words. For example, "tokenization" can become "token" + "##ization". Thus, the implementation needs an alignment policy. Select one of these:
 
-- Copy the tag of the word to each subword.
+- Copy the tag of the word to each subword. For a `B-` tag, keep `B-` on the first subword and use `I-` on the next subwords.
 - Label only the first subword, and do not use the other subwords in the loss.
 - Combine the subword states before classification.
 

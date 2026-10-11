@@ -11,8 +11,8 @@ try {
 }
 
 const file = String(input.tool_input?.file_path ?? input.tool_response?.filePath ?? "").replace(/\\/g, "/");
-const isLesson = /\/src\/content\/chapters\/[^/]+\/[^/]+\.mdx$/.test(file);
-const isDiagram = /\/src\/components\/diagrams\/[^/]+\.tsx$/.test(file);
+const isLesson = /(?:^|\/)src\/content\/chapters\/[^/]+\/[^/]+\.mdx$/.test(file);
+const isDiagram = /(?:^|\/)src\/components\/diagrams\/[^/]+\.tsx$/.test(file);
 if (!isLesson && !isDiagram) process.exit(0);
 
 // Diagram captions live in both places; Mermaid charts live only in the lessons.

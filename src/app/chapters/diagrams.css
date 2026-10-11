@@ -47,6 +47,8 @@
 
 @keyframes dg-flow { to { stroke-dashoffset: -22; } }
 @keyframes dg-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+/* Moving dashes and pulses run only while the diagram plays, is on screen and the tab is visible. */
+.diagram[data-playing="false"] .dg .dg-line.dg-on, .diagram[data-playing="false"] .dg .dg-pulse { animation: none; }
 
 @media (max-width: 640px) {
   .diagram { margin: 2rem 0; }

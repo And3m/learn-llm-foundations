@@ -55,7 +55,7 @@ Optimization also makes maintenance work. A prompt that fits one model version, 
 
 A soft prompt is a trainable sequence of continuous embedding vectors. It goes before the ordinary input. Gradient descent updates these vectors, and the base language model can stay frozen.
 
-- **Prefix fine-tuning** adds trainable vectors at the start of the input of each Transformer layer.
+- **Prefix fine-tuning** adds learned prefix vectors at the start of the hidden-state sequence of each Transformer layer. The attention in that layer can attend to them. Unlike a soft prompt, each layer has its own prefix. The layer below does not calculate it.
 - **Adapters** and **low-rank updates** are wider parameter-efficient fine-tuning methods.
 
 $E_p \in \mathbb{R}^{m \times d}$ is a learned prompt of $m$ vectors. $E_x$ contains the token embeddings. The model gets a sequence such as $[E_p; E_x]$. This means that the learned vectors come first, and then the embeddings of the real input. You can store only a small set of parameters for each task.

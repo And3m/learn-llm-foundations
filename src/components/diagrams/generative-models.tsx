@@ -134,7 +134,7 @@ export function SparseAttentionDiagram() {
   return (
     <DiagramFrame
       title="Which token pairs each attention pattern computes"
-      caption="Each row is a query position. A green cell is a token pair that the model calculates. Sparse patterns calculate fewer pairs, so distant information must travel through more hops or through a global token."
+      caption="Each row is a query position. A green cell is a token pair that the model calculates. Sparse patterns calculate fewer pairs. Distant information must travel through more hops, or come from a global token that all positions can read."
       steps={patterns.length}
       stepLabels={patterns.map((item) => item.name)}
       intervalMs={2400}

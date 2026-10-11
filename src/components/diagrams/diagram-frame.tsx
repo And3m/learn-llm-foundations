@@ -46,7 +46,7 @@ export function DiagramFrame({ title, caption, steps, stepLabels, intervalMs = 1
   };
 
   return (
-    <figure className="diagram" ref={ref}>
+    <figure className="diagram" ref={ref} data-playing={playing && onScreen && pageVisible}>
       <figcaption className="diagram__header">
         <span>Diagram</span>
         <strong>{title}</strong>

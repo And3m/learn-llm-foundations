@@ -21,7 +21,7 @@
   /* Type scale. Display sizes grow with the viewport and stop near 1440px. 12px is the text floor. */
   --display-1: clamp(2.5rem, 1.2rem + 2.5vw, 3.5rem);
   --display-2: clamp(2.25rem, 1.1rem + 2.1vw, 3rem);
-  --display-3: clamp(2rem, 1.1rem + 1.7vw, 2.625rem);
+  --display-3: clamp(1.75rem, 1.1rem + 1.7vw, 2.625rem);
   --heading-2: clamp(1.5rem, 1.2rem + .6vw, 1.75rem);
   --text-body: 1.0625rem;
   --text-sm: .8125rem;
