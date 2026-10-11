@@ -28,8 +28,10 @@ export function Box({ x, y, w, h, label, sub, state, mono, rx = 8 }: { x: number
 export function Arrow({ x1, y1, x2, y2, on, hidden }: { x1: number; y1: number; x2: number; y2: number; on?: boolean; hidden?: boolean }) {
   const angle = Math.atan2(y2 - y1, x2 - x1);
   const size = 7;
-  const left = [x2 - size * Math.cos(angle - 0.45), y2 - size * Math.sin(angle - 0.45)];
-  const right = [x2 - size * Math.cos(angle + 0.45), y2 - size * Math.sin(angle + 0.45)];
+  // One decimal is enough for screen pixels and keeps the SVG markup short.
+  const round = (value: number) => Math.round(value * 10) / 10;
+  const left = [round(x2 - size * Math.cos(angle - 0.45)), round(y2 - size * Math.sin(angle - 0.45))];
+  const right = [round(x2 - size * Math.cos(angle + 0.45)), round(y2 - size * Math.sin(angle + 0.45))];
   return (
     <g opacity={hidden ? 0 : 1} className="dg-fade">
       <line className={`dg-line${on ? " dg-on" : ""}`} x1={x1} y1={y1} x2={x2} y2={y2} />
