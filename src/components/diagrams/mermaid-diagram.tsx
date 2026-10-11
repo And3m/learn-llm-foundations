@@ -54,6 +54,7 @@ async function loadMermaid(theme: string): Promise<Mermaid> {
       noteTextColor: token(styles, "--foreground"),
       noteBorderColor: token(styles, "--border"),
       labelBoxBkgColor: token(styles, "--surface-2"),
+      edgeLabelBackground: token(styles, "--background"),
       fontSize: "14px",
     },
   });
