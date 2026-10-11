@@ -58,7 +58,7 @@ button, input { font: inherit; }
 .mobile-menu__panel svg { width: 1rem; height: 1rem; }
 .mobile-menu__panel .profile-links { display: grid; gap: 0; margin-top: .4rem; padding-top: .4rem; border-top: 1px solid var(--border); }
 
-.eyebrow, .lesson-number { font-family: var(--font-mono), monospace; text-transform: uppercase; letter-spacing: 0; font-size: .67rem; font-weight: 500; color: var(--signal); }
+.eyebrow, .lesson-number { font-family: var(--font-mono), monospace; text-transform: uppercase; letter-spacing: 0; font-size: .67rem; font-weight: 400; color: var(--signal); }
 .site-footer { max-width: 86rem; margin: 5rem auto 0; padding: 2.2rem 2rem 3.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 2rem; color: var(--muted); font-size: .8rem; }
 .site-footer p { margin: .4rem 0; }
 .site-footer__about { max-width: 36rem; }
@@ -127,7 +127,7 @@ button, input { font: inherit; }
 .lesson-row small { color: var(--faint); font-size: .68rem; }
 
 .reading-progress { position: fixed; z-index: 60; top: 4.2rem; left: 0; right: 0; height: 2px; }
-.reading-progress span { display: block; height: 100%; background: var(--signal); transition: width .1s linear; }
+.reading-progress span { display: block; width: 100%; height: 100%; background: var(--signal); transform: scaleX(0); transform-origin: 0 50%; will-change: transform; }
 .reading-layout { max-width: 92rem; margin: 0 auto; padding: 3rem 2rem 0; display: grid; grid-template-columns: 13.5rem minmax(0, 46rem) 12rem; gap: 3.25rem; justify-content: center; }
 .lesson-sidebar, .article-toc { position: sticky; top: 7.25rem; height: fit-content; }
 .lesson-sidebar__title { display: block; margin: .35rem 0 1.3rem; font-family: var(--font-serif), serif; font-size: 1.22rem; font-weight: 550; }

@@ -1,7 +1,7 @@
 "use client";
 
 import { DiagramFrame } from "./diagram-frame";
-import { Arrow, Box, Label, Svg } from "./svg";
+import { Arrow, Box, Label, Meter, Svg } from "./svg";
 
 const prompt = ["Models", "learn", "from"];
 const generated = [
@@ -37,8 +37,7 @@ export function AutoregressiveDiagram() {
                 {next.options.map(([word, p], index) => (
                   <g key={word}>
                     <Label x={150} y={196 + index * 24} mono anchor="end" on={index === 0}>{word}</Label>
-                    <rect className="dg-fill-off" x={162} y={184 + index * 24} width={300} height={14} rx={7} />
-                    <rect className={index === 0 ? "dg-fill-on" : "dg-fill-alt"} x={162} y={184 + index * 24} width={300 * p} height={14} rx={7} opacity={index === 0 ? 1 : 0.5} />
+                    <Meter x={162} y={184 + index * 24} w={300} value={p} tone={index === 0 ? "on" : "alt"} opacity={index === 0 ? 1 : 0.5} />
                     <Label x={472} y={196 + index * 24} small anchor="start">{p.toFixed(2)}</Label>
                   </g>
                 ))}
@@ -55,9 +54,9 @@ export function AutoregressiveDiagram() {
 }
 
 const strategies = [
-  { name: "Data parallelism", note: "Each device has a full copy of the model and a different part of the batch. Devices average their gradients." },
-  { name: "Tensor parallelism", note: "Each layer is divided across devices. Devices exchange partial results inside each layer." },
-  { name: "Pipeline parallelism", note: "Each device holds a group of layers. Micro-batches move through the stages. Idle slots are bubbles." },
+  { name: "Data parallelism", hint: "All-reduce: average the gradients", note: ["Each device has a full copy of the model and a different part of the batch.", "Devices average their gradients."] },
+  { name: "Tensor parallelism", hint: "Exchange partial activations inside each layer", note: ["Each layer is divided across devices.", "Devices exchange partial results inside each layer."] },
+  { name: "Pipeline parallelism", hint: "Send activations from stage to stage", note: ["Each device holds a group of layers. Micro-batches move through the stages.", "Grey slots are bubbles: the stage waits with no work."] },
 ];
 
 export function ParallelismDiagram() {
@@ -71,7 +70,7 @@ export function ParallelismDiagram() {
       intervalMs={3200}
     >
       {(step) => (
-        <Svg width={640} height={290}>
+        <Svg width={640} height={300}>
           <Label x={320} y={20} on>{strategies[step].name}</Label>
           {Array.from({ length: devices }, (_, device) => {
             const x = 20 + device * 152;
@@ -92,11 +91,11 @@ export function ParallelismDiagram() {
                 ) : (
                   <g>
                     <Box x={x + 14} y={62} w={112} h={44} label={`Layer ${device + 1}`} sub="one stage" state="on" rx={4} />
-                    {[0, 1, 2].map((micro) => {
-                      const slot = micro + device;
-                      return <rect key={micro} className="dg-fill-on" x={x + 14 + slot * 16} y={130} width={14} height={14} rx={3} opacity={0.4 + micro * 0.3} />;
+                    {Array.from({ length: 7 }, (_, slot) => {
+                      const micro = slot - device;
+                      const busy = micro >= 0 && micro < 3;
+                      return <rect key={slot} className={busy ? "dg-fill-on" : "dg-fill-off"} x={x + 14 + slot * 16} y={130} width={14} height={14} rx={3} opacity={busy ? 0.4 + micro * 0.3 : undefined} />;
                     })}
-                    {Array.from({ length: 7 }, (_, slot) => (slot < device || slot > device + 2 ? <rect key={slot} className="dg-fill-off" x={x + 14 + slot * 16} y={130} width={14} height={14} rx={3} /> : null))}
                     <Label x={x + 70} y={168} small>time →</Label>
                   </g>
                 )}
@@ -104,12 +103,9 @@ export function ParallelismDiagram() {
             );
           })}
           {step === 0 ? <line className="dg-line dg-on" x1={40} y1={220} x2={600} y2={220} /> : null}
-          {step === 1 ? Array.from({ length: devices - 1 }, (_, index) => <Arrow key={index} x1={160 + index * 152} y1={120} x2={172 + index * 152} y2={120} on />) : null}
-          {step === 2 ? Array.from({ length: devices - 1 }, (_, index) => <Arrow key={index} x1={160 + index * 152} y1={84} x2={172 + index * 152} y2={84} on />) : null}
-          <Label x={320} y={240} small>{step === 0 ? "All-reduce: average the gradients" : step === 1 ? "Exchange partial activations inside each layer" : "Send activations from stage to stage; grey cells are bubbles"}</Label>
-          <foreignObject x={20} y={250} width={600} height={40}>
-            <p style={{ margin: 0, fontSize: 12, color: "var(--muted)", textAlign: "center" }}>{strategies[step].note}</p>
-          </foreignObject>
+          {step > 0 ? Array.from({ length: devices - 1 }, (_, index) => <Arrow key={index} x1={160 + index * 152} y1={step === 1 ? 120 : 84} x2={172 + index * 152} y2={step === 1 ? 120 : 84} on />) : null}
+          <Label x={320} y={240} on>{strategies[step].hint}</Label>
+          {strategies[step].note.map((line, index) => <Label key={line} x={320} y={262 + index * 18} small>{line}</Label>)}
         </Svg>
       )}
     </DiagramFrame>
@@ -123,8 +119,15 @@ const patterns = [
   { name: "Strided links", see: (row: number, col: number) => col <= row && (row - col < 2 || (row - col) % 4 === 0) },
 ];
 
+const n = 10;
+const dense = (n * (n + 1)) / 2;
+const pairCounts = patterns.map((pattern) => {
+  let count = 0;
+  for (let row = 0; row < n; row += 1) for (let col = 0; col < n; col += 1) if (pattern.see(row, col)) count += 1;
+  return count;
+});
+
 export function SparseAttentionDiagram() {
-  const n = 10;
   const cell = 22;
   const ox = 40;
   const oy = 40;
@@ -138,9 +141,7 @@ export function SparseAttentionDiagram() {
     >
       {(step) => {
         const pattern = patterns[step];
-        let count = 0;
-        for (let row = 0; row < n; row += 1) for (let col = 0; col < n; col += 1) if (pattern.see(row, col)) count += 1;
-        const dense = (n * (n + 1)) / 2;
+        const count = pairCounts[step];
         return (
           <Svg width={640} height={290}>
             <Label x={ox} y={26} small anchor="start">query ↓  key →</Label>
@@ -151,8 +152,7 @@ export function SparseAttentionDiagram() {
             )}
             <Label x={320} y={90} anchor="start" on>{pattern.name}</Label>
             <Label x={320} y={120} anchor="start">Pairs calculated: {count} of {dense}</Label>
-            <rect className="dg-fill-off" x={320} y={134} width={260} height={14} rx={7} />
-            <rect className="dg-fill-on" x={320} y={134} width={(260 * count) / dense} height={14} rx={7} style={{ transition: "width .5s ease" }} />
+            <Meter x={320} y={134} w={260} value={count / dense} />
             <Label x={320} y={180} anchor="start" small>
               {step === 0 ? "Each token attends to all earlier tokens." : step === 1 ? "Each token sees only its near neighbors." : step === 2 ? "Token 1 is global: all tokens can read it." : "Some far links skip ahead in fixed steps."}
             </Label>
@@ -199,8 +199,7 @@ export function KvSharingDiagram() {
             })}
             {Array.from({ length: kv }, (_, index) => <Box key={index} x={kvx(index)} y={130} w={qWidth} h={34} label={`KV${index + 1}`} mono state="on" rx={6} />)}
             <Label x={24} y={198} anchor="start" small>KV cache size (relative)</Label>
-            <rect className="dg-fill-off" x={24} y={208} width={592} height={14} rx={7} />
-            <rect className="dg-fill-on" x={24} y={208} width={(592 * kv) / queries} height={14} rx={7} style={{ transition: "width .5s ease" }} />
+            <Meter x={24} y={208} w={592} value={kv / queries} />
             <Label x={620} y={242} anchor="end" small>{Math.round((kv / queries) * 100)}% of the multi-head cache</Label>
           </Svg>
         );

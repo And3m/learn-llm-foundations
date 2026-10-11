@@ -1,6 +1,5 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { diagramCaptions, lessonSources, mermaidElement } from "./lesson-sources";
 
 /**
  * A light guard for the Simplified Technical English (STE) style of the lessons.
@@ -10,11 +9,12 @@ import { describe, expect, it } from "vitest";
 const MAX_WORDS = 25;
 const bannedWords = ["utilize", "utilise", "leverage", "various", "basically", "significantly", "very important", "in order to", "plethora", "myriad"];
 
-const chaptersDir = join(process.cwd(), "src", "content", "chapters");
+const countWords = (sentence: string) => sentence.split(/\s+/).length;
+const findBanned = (text: string) => bannedWords.filter((word) => new RegExp(`\\b${word}\\b`, "i").test(text));
 
-export function proseSentences(mdx: string) {
+function proseSentences(mdx: string) {
   const prose = mdx
-    .replace(/<MermaidDiagram[\s\S]*?\/>/g, " ")
+    .replace(mermaidElement, " ")
     .replace(/^import .*$/gm, " ")
     .replace(/\$\$[\s\S]*?\$\$/g, " ")
     .replace(/\$[^$\n]+\$/g, "X")
@@ -32,20 +32,30 @@ export function proseSentences(mdx: string) {
     .filter((sentence) => /[a-z]/i.test(sentence));
 }
 
-const lessons = readdirSync(chaptersDir).flatMap((chapter) =>
-  readdirSync(join(chaptersDir, chapter))
-    .filter((file) => file.endsWith(".mdx"))
-    .map((file) => ({ name: `${chapter}/${file}`, source: readFileSync(join(chaptersDir, chapter, file), "utf8") })),
-);
+const lessons = lessonSources();
+// Diagram captions are reader-facing text too. They live in MDX props and in the diagram components.
+const captions = diagramCaptions();
 
 describe("Simplified Technical English guard", () => {
   it.each(lessons)(`$name has no sentence longer than ${MAX_WORDS} words`, ({ source }) => {
-    const long = proseSentences(source).filter((sentence) => sentence.split(/\s+/).length > MAX_WORDS);
-    expect(long).toEqual([]);
+    expect(proseSentences(source).filter((sentence) => countWords(sentence) > MAX_WORDS)).toEqual([]);
   });
 
   it.each(lessons)("$name uses no banned words", ({ source }) => {
-    const text = proseSentences(source).join(" ").toLowerCase();
-    expect(bannedWords.filter((word) => new RegExp(`\\b${word}\\b`).test(text))).toEqual([]);
+    expect(findBanned(proseSentences(source).join(" "))).toEqual([]);
+  });
+
+  it("detects banned words and long sentences", () => {
+    expect(findBanned("We utilize the cache.")).toEqual(["utilize"]);
+    expect(proseSentences(`${"word ".repeat(30).trim()}.`).filter((sentence) => countWords(sentence) > MAX_WORDS)).toHaveLength(1);
+  });
+
+  it("finds the diagram captions", () => {
+    expect(captions.length).toBeGreaterThan(30);
+  });
+
+  it.each(captions)("$name caption follows STE", ({ caption }) => {
+    expect(caption.split(/(?<=[.!?])\s+/).filter((sentence) => countWords(sentence) > MAX_WORDS)).toEqual([]);
+    expect(findBanned(caption)).toEqual([]);
   });
 });

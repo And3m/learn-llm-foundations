@@ -38,6 +38,16 @@ export function Arrow({ x1, y1, x2, y2, on, hidden }: { x1: number; y1: number; 
   );
 }
 
+/** A horizontal bar meter: a grey track and a filled part for a value from 0 to 1. */
+export function Meter({ x, y, w, value, tone = "on", opacity }: { x: number; y: number; w: number; value: number; tone?: "on" | "alt"; opacity?: number }) {
+  return (
+    <g>
+      <rect className="dg-fill-off" x={x} y={y} width={w} height={14} rx={7} />
+      <rect className={tone === "on" ? "dg-fill-on" : "dg-fill-alt"} x={x} y={y} width={w * value} height={14} rx={7} opacity={opacity} />
+    </g>
+  );
+}
+
 export function Label({ x, y, children, small, title, on, anchor = "middle", mono }: { x: number; y: number; children: React.ReactNode; small?: boolean; title?: boolean; on?: boolean; anchor?: "start" | "middle" | "end"; mono?: boolean }) {
   const classes = [small && "dg-small", title && "dg-title", on && "dg-on", mono && "dg-mono"].filter(Boolean).join(" ");
   return (

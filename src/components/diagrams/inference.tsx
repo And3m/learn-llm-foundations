@@ -1,7 +1,8 @@
 "use client";
 
 import { DiagramFrame } from "./diagram-frame";
-import { Arrow, Box, Label, Svg } from "./svg";
+import { normalizedProbabilities } from "@/lib/simulators";
+import { Arrow, Box, Label, Meter, Svg } from "./svg";
 
 const promptTokens = ["Explain", "KV", "caches", "in", "brief"];
 const outputTokens = ["They", "store", "past", "keys"];
@@ -16,7 +17,7 @@ export function PrefillDecodeDiagram() {
       intervalMs={1700}
     >
       {(step) => {
-        const cacheSize = promptTokens.length + Math.max(0, step - 1) + (step > 0 ? 1 : 0);
+        const cacheSize = promptTokens.length + step;
         return (
           <Svg width={640} height={290}>
             <Label x={16} y={20} title anchor="start">{step === 0 ? "Prefill" : `Decode step ${step}`}</Label>
@@ -35,7 +36,7 @@ export function PrefillDecodeDiagram() {
             <Box x={16} y={100} w={608} h={40} label={step === 0 ? "Transformer: large parallel matrix operations" : "Transformer: small operation for one token"} state="on" />
             <Label x={16} y={168} small anchor="start">KV cache ({cacheSize} positions)</Label>
             {Array.from({ length: promptTokens.length + outputTokens.length }, (_, index) => (
-              <rect key={index} x={16 + index * 40} y={176} width={34} height={22} rx={4} className={index < cacheSize ? (index === cacheSize - 1 ? "dg-fill-on" : "dg-fill-alt") : "dg-fill-off"} opacity={index < cacheSize ? (index === cacheSize - 1 ? 1 : 0.55) : 1} />
+              <rect key={index} x={16 + index * 40} y={176} width={34} height={22} rx={4} className={index < cacheSize ? (index === cacheSize - 1 ? "dg-fill-on" : "dg-fill-alt") : "dg-fill-off"} opacity={index < cacheSize - 1 ? 0.55 : 1} />
             ))}
             <Label x={16} y={228} small anchor="start">Timeline</Label>
             <rect className={step === 0 ? "dg-fill-on" : "dg-fill-alt"} x={16} y={236} width={220} height={22} rx={4} opacity={step === 0 ? 1 : 0.55} />
@@ -62,9 +63,7 @@ const settings = [
 ];
 
 function distribution({ t, k, p }: { t: number; k?: number; p?: number }) {
-  const exps = logits.map((value) => Math.exp(value / t));
-  const sum = exps.reduce((total, value) => total + value, 0);
-  const probs = exps.map((value) => value / sum);
+  const probs = normalizedProbabilities(logits.map((value) => value / t));
   let keep = probs.map(() => true);
   if (k) keep = probs.map((_, index) => index < k);
   if (p) {
@@ -79,6 +78,8 @@ function distribution({ t, k, p }: { t: number; k?: number; p?: number }) {
   return probs.map((value, index) => ({ value: keep[index] ? value / kept : 0, original: value, keep: keep[index] }));
 }
 
+const distributions = settings.map(distribution);
+
 export function SamplingDiagram() {
   return (
     <DiagramFrame
@@ -90,17 +91,17 @@ export function SamplingDiagram() {
     >
       {(step) => {
         const setting = settings[step];
-        const dist = distribution(setting);
+        const dist = distributions[step];
         return (
           <Svg width={640} height={270}>
             <Label x={320} y={20} on>{setting.name}</Label>
             {dist.map((item, index) => {
               const x = 40 + index * 98;
-              const height = item.value * 300;
+              const height = item.value * 260;
               return (
                 <g key={vocab[index]}>
                   <rect className="dg-fill-off" x={x} y={40} width={60} height={180} rx={6} opacity={0.5} />
-                  <rect className={item.keep ? (index === 0 ? "dg-fill-on" : "dg-fill-alt") : "dg-fill-off"} x={x} y={220 - Math.min(height, 180)} width={60} height={Math.min(height, 180)} rx={6} style={{ transition: "y .5s ease, height .5s ease" }} />
+                  <rect className={item.keep ? (index === 0 ? "dg-fill-on" : "dg-fill-alt") : "dg-fill-off"} x={x} y={220 - Math.min(height, 180)} width={60} height={Math.min(height, 180)} rx={6} />
                   <Label x={x + 30} y={238} mono on={index === 0}>{vocab[index]}</Label>
                   <Label x={x + 30} y={258} small>{item.keep ? item.value.toFixed(2) : "removed"}</Label>
                 </g>
@@ -166,18 +167,22 @@ const continuousSchedule: Cell[][] = [
   ["D", "D", "D", "D", null, null, null, null, null, null],
 ];
 
+/** The decode step at which each request in a schedule finishes. */
+function finishTimes(schedule: Cell[][]) {
+  return schedule.flatMap((row) => row.flatMap((value, t) => (value && value !== "·" && row[t + 1] !== value ? [t] : [])));
+}
+
 function Lane({ title, schedule, y, time }: { title: string; schedule: Cell[][]; y: number; time: number }) {
   const cell = 46;
-  let finished = 0;
-  for (const row of schedule) for (let t = 0; t <= time; t += 1) if (row[t] && row[t] !== "·" && row[t + 1] !== row[t]) finished += 1;
+  const ends = finishTimes(schedule);
+  const finished = ends.filter((end) => end <= time).length;
   return (
     <g>
       <Label x={16} y={y - 8} title anchor="start">{title}</Label>
-      <Label x={624} y={y - 8} small anchor="end">finished: {finished} of 7</Label>
+      <Label x={624} y={y - 8} small anchor="end">finished: {finished} of {ends.length}</Label>
       {schedule.map((row, slot) =>
         row.map((value, t) => {
-          if (t > time) return <rect key={`${slot}-${t}`} x={70 + t * cell} y={y + slot * 24} width={cell - 4} height={20} rx={4} className="dg-fill-off" opacity={0.35} />;
-          if (value === null) return <rect key={`${slot}-${t}`} x={70 + t * cell} y={y + slot * 24} width={cell - 4} height={20} rx={4} className="dg-fill-off" opacity={0.35} />;
+          if (t > time || value === null) return <rect key={`${slot}-${t}`} x={70 + t * cell} y={y + slot * 24} width={cell - 4} height={20} rx={4} className="dg-fill-off" opacity={0.35} />;
           const padding = value === "·";
           return (
             <g key={`${slot}-${t}`}>
@@ -221,8 +226,9 @@ const candidates = [
 ];
 const bonSteps = ["Sample N = 4 candidates", "A verifier scores each candidate", "Select the best candidate"];
 
+const best = candidates.reduce((top, item, index) => (item.score > candidates[top].score ? index : top), 0);
+
 export function BestOfNDiagram() {
-  const best = candidates.reduce((top, item, index) => (item.score > candidates[top].score ? index : top), 0);
   return (
     <DiagramFrame
       title="Best-of-N sampling with a verifier"
@@ -241,15 +247,13 @@ export function BestOfNDiagram() {
             return (
               <g key={item.text}>
                 <Arrow x1={142} y1={125} x2={196} y2={y + 20} on={step === 0} />
-                <Box x={200} y={y} w={200} h={40} label={item.text} mono state={chosen ? "on" : step === 2 ? "dim" : "off"} rx={6} />
+                <Box x={200} y={y} w={200} h={40} label={chosen ? `${item.text} ✓ returned` : item.text} mono state={chosen ? "on" : step === 2 ? "dim" : "off"} rx={6} />
                 {step >= 1 ? (
                   <g>
-                    <rect className="dg-fill-off" x={420} y={y + 13} width={140} height={14} rx={7} />
-                    <rect className={chosen ? "dg-fill-on" : "dg-fill-alt"} x={420} y={y + 13} width={140 * item.score} height={14} rx={7} style={{ transition: "width .5s ease" }} />
+                    <Meter x={420} y={y + 13} w={140} value={item.score} tone={chosen ? "on" : "alt"} />
                     <Label x={572} y={y + 25} small anchor="start">{item.score.toFixed(2)}</Label>
                   </g>
                 ) : null}
-                {chosen ? <Label x={300} y={y + 56} on>returned to the user</Label> : null}
               </g>
             );
           })}

@@ -1,21 +1,8 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
 import type { Mermaid } from "mermaid";
 import { beforeAll, describe, expect, it } from "vitest";
+import { mermaidCharts } from "./lesson-sources";
 
-const chaptersDir = join(process.cwd(), "src", "content", "chapters");
-
-const charts = readdirSync(chaptersDir).flatMap((chapter) =>
-  readdirSync(join(chaptersDir, chapter))
-    .filter((file) => file.endsWith(".mdx"))
-    .flatMap((file) => {
-      const source = readFileSync(join(chaptersDir, chapter, file), "utf8");
-      return [...source.matchAll(/<MermaidDiagram[\s\S]*?chart=\{`([\s\S]*?)`\}/g)].map((match, index) => ({
-        name: `${chapter}/${file}#${index + 1}`,
-        chart: match[1].trim(),
-      }));
-    }),
-);
+const charts = mermaidCharts();
 
 describe("Mermaid diagrams", () => {
   let mermaid: Mermaid;

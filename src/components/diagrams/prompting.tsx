@@ -1,7 +1,7 @@
 "use client";
 
 import { DiagramFrame } from "./diagram-frame";
-import { Arrow, Box, Label, Svg } from "./svg";
+import { Arrow, Box, Label, Meter, Svg } from "./svg";
 
 const shots = [
   { name: "Zero-shot", examples: 0, confidence: 0.45 },
@@ -35,8 +35,7 @@ export function FewShotDiagram() {
             <Box x={344} y={104} w={120} h={52} label="Frozen LLM" sub="weights do not change" state="frozen" />
             <Arrow x1={468} y1={130} x2={500} y2={130} on />
             <Label x={570} y={110}>urgent</Label>
-            <rect className="dg-fill-off" x={504} y={122} width={130} height={14} rx={7} />
-            <rect className="dg-fill-on" x={504} y={122} width={130 * shot.confidence} height={14} rx={7} style={{ transition: "width .5s ease" }} />
+            <Meter x={504} y={122} w={130} value={shot.confidence} />
             <Label x={570} y={156} small>P(correct label) ≈ {shot.confidence.toFixed(2)}</Label>
             <Label x={570} y={176} small>(example values)</Label>
           </Svg>
@@ -114,7 +113,7 @@ export function SoftPromptDiagram() {
               <g key={index} className={step === 2 ? "dg-pulse" : undefined}>
                 <rect className="dg-box dg-on" x={20 + index * 76} y={190} width={68} height={60} rx={6} />
                 {vector.map((value, bar) => (
-                  <rect key={bar} className="dg-fill-on" x={28 + index * 76 + bar * 14} y={242 - value * 40} width={10} height={value * 40} rx={2} style={{ transition: "y .5s ease, height .5s ease" }} />
+                  <rect key={bar} className="dg-fill-on" x={28 + index * 76 + bar * 14} y={242 - value * 40} width={10} height={value * 40} rx={2} />
                 ))}
                 <Label x={54 + index * 76} y={270} small>P{index + 1}</Label>
               </g>

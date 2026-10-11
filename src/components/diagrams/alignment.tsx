@@ -1,7 +1,7 @@
 "use client";
 
 import { DiagramFrame } from "./diagram-frame";
-import { Arrow, Box, Label, Svg } from "./svg";
+import { Arrow, Box, Label, Meter, Svg } from "./svg";
 
 const pairs = [
   { instruction: "Summarize this report.", response: "The report shows three risks…", loss: 2.1 },
@@ -37,8 +37,7 @@ export function InstructionDataDiagram() {
             <rect className="dg-box dg-on" x={272} y={218} width={350} height={30} rx={6} />
             <Label x={447} y={238} on>{pair.response}</Label>
             <Label x={500} y={70} small anchor="start">SFT loss</Label>
-            <rect className="dg-fill-off" x={500} y={80} width={120} height={14} rx={7} />
-            <rect className="dg-fill-on" x={500} y={80} width={(120 * pair.loss) / 2.4} height={14} rx={7} style={{ transition: "width .5s ease" }} />
+            <Meter x={500} y={80} w={120} value={pair.loss / 2.4} />
             <Label x={500} y={114} small anchor="start">{pair.loss.toFixed(1)} (example)</Label>
           </Svg>
         );
@@ -115,12 +114,12 @@ export function ProcessSupervisionDiagram() {
           {chain.map((item, index) => {
             const y = 34 + index * 48;
             const isAnswer = index === chain.length - 1;
-            const judged = (step === 1 && isAnswer) || (step === 2 && item.correct !== null && !isAnswer) || (step === 2 && isAnswer);
-            const ok = item.correct;
+            const judged = (step === 1 && isAnswer) || (step === 2 && item.correct !== null);
+            const ok = item.correct === true;
             return (
               <g key={item.text}>
                 <Box x={60} y={y} w={340} h={36} label={item.text} mono state={judged ? (ok ? "on" : "alt") : "off"} rx={6} />
-                {judged ? <Label x={420} y={y + 23} anchor="start" on={Boolean(ok)}>{ok ? "✓ reward" : "✗ error found"}</Label> : null}
+                {judged ? <Label x={420} y={y + 23} anchor="start" on={ok}>{ok ? "✓ reward" : "✗ error found"}</Label> : null}
                 {step === 1 && !isAnswer && index > 0 ? <Label x={420} y={y + 23} anchor="start" small>not checked</Label> : null}
               </g>
             );

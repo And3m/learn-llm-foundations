@@ -1,7 +1,7 @@
 "use client";
 
 import { DiagramFrame } from "./diagram-frame";
-import { Arrow, Box, Label, Svg } from "./svg";
+import { Arrow, Box, Label, Meter, Svg } from "./svg";
 
 const paradigms = [
   { name: "Unsupervised", data: "Unlabeled data", signal: "A criterion", detail: "reconstruct or cluster" },
@@ -195,11 +195,9 @@ export function FineTuneLayersDiagram() {
             <Label x={360} y={80} anchor="start" on>{mode.name}</Label>
             <Label x={360} y={106} anchor="start">{mode.note}</Label>
             <Label x={360} y={150} anchor="start" small>Training memory (relative)</Label>
-            <rect className="dg-fill-off" x={360} y={160} width={240} height={14} rx={7} />
-            <rect className="dg-fill-on" x={360} y={160} width={240 * mode.memory} height={14} rx={7} style={{ transition: "width .5s ease" }} />
+            <Meter x={360} y={160} w={240} value={mode.memory} />
             <Label x={360} y={206} anchor="start" small>Task capacity</Label>
-            <rect className="dg-fill-off" x={360} y={216} width={240} height={14} rx={7} />
-            <rect className="dg-fill-alt" x={360} y={216} width={240 * (0.25 + mode.memory * 0.75)} height={14} rx={7} style={{ transition: "width .5s ease" }} />
+            <Meter x={360} y={216} w={240} value={0.25 + mode.memory * 0.75} tone="alt" />
           </Svg>
         );
       }}

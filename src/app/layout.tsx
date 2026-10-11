@@ -9,7 +9,8 @@ import { siteUrl } from "@/lib/content";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const literata = Literata({ subsets: ["latin"], variable: "--font-serif" });
-const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono" });
+// Only small uppercase labels use the mono font, so load one weight and do not preload it.
+const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: "400", variable: "--font-mono", preload: false });
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
