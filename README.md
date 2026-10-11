@@ -74,10 +74,10 @@ src/
 |   `-- chapters/[chapter]/      # Static chapter and lesson routes
 |-- components/
 |   |-- content/                 # MDX callouts and source notes
+|   |-- diagrams/                # Mermaid and animated SVG diagrams
 |   `-- simulators/              # Isolated interactive concept labs
 |-- content/
-|   |-- chapters/                # Lessons grouped by chapter slug
-|   `-- lesson-components.ts     # Explicit static MDX import map
+|   `-- chapters/                # Lessons grouped by chapter slug (one dynamic import per lesson page)
 `-- lib/                         # Content registry and tested calculations
 public/
 `-- resources/                   # Downloadable source PDF

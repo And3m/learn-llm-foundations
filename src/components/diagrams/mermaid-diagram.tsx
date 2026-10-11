@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 type MermaidDiagramProps = {
   title: string;
@@ -14,16 +14,33 @@ const token = (styles: CSSStyleDeclaration, name: string) => styles.getPropertyV
 /**
  * Renders a Mermaid diagram in the browser. The site theme tokens set the diagram colors,
  * and the diagram draws again when the reader changes the theme. Until Mermaid loads,
- * the reader sees the diagram source text.
+ * the reader sees the diagram source text. Mermaid loads only when the diagram comes near
+ * the viewport, so a reader who does not scroll to a diagram does not download it.
  */
 export function MermaidDiagram({ title, caption, chart }: MermaidDiagramProps) {
   const { resolvedTheme } = useTheme();
   const id = `mermaid-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const [svg, setSvg] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [near, setNear] = useState(false);
+  const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!resolvedTheme) return;
+    const node = ref.current;
+    if (!node || near) return;
+    if (typeof IntersectionObserver === "undefined") {
+      queueMicrotask(() => setNear(true));
+      return;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setNear(true);
+    }, { rootMargin: "600px 0px" });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [near]);
+
+  useEffect(() => {
+    if (!resolvedTheme || !near) return;
     let cancelled = false;
     (async () => {
       try {
@@ -72,10 +89,10 @@ export function MermaidDiagram({ title, caption, chart }: MermaidDiagramProps) {
     return () => {
       cancelled = true;
     };
-  }, [chart, id, resolvedTheme]);
+  }, [chart, id, near, resolvedTheme]);
 
   return (
-    <figure className="diagram diagram--mermaid">
+    <figure className="diagram diagram--mermaid" ref={ref}>
       <figcaption className="diagram__header">
         <span>Diagram</span>
         <strong>{title}</strong>

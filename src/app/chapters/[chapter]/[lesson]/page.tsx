@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArticleShell } from "@/components/article-shell";
-import { lessonComponents } from "@/content/lesson-components";
 import { getAllLessons, getChapter, getLesson } from "@/lib/content";
 
 type Props = { params: Promise<{ chapter: string; lesson: string }> };
@@ -22,7 +21,8 @@ export default async function LessonPage({ params }: Props) {
   const { chapter: chapterSlug, lesson: lessonSlug } = await params;
   const chapter = getChapter(chapterSlug);
   const lesson = getLesson(chapterSlug, lessonSlug);
-  const Content = lessonComponents[`${chapterSlug}/${lessonSlug}` as keyof typeof lessonComponents];
-  if (!chapter || !lesson || !Content) notFound();
+  if (!chapter || !lesson) notFound();
+  // Import only this lesson, so that each page ships only its own labs and diagrams.
+  const { default: Content } = await import(`@/content/chapters/${chapterSlug}/${lessonSlug}.mdx`);
   return <ArticleShell chapter={chapter} lesson={lesson}><Content /></ArticleShell>;
 }
