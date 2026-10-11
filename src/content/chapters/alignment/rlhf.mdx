@@ -47,20 +47,20 @@ The training loop has three steps:
   caption="The reward model scores each response. The optimizer compares the token probabilities of the policy and the frozen reference model. The KL penalty discourages large moves away from the reference."
   chart={`
 sequenceDiagram
-  participant D as Prompt dataset
+  participant D as Prompts
   participant P as Policy π_θ
-  participant RM as Reward model r_φ
-  participant Ref as Reference π_ref (frozen)
-  participant O as RL optimizer (for example PPO)
-  D->>P: Sample prompt x
-  P->>P: Generate response y
+  participant RM as Reward r_φ
+  participant Ref as Reference π_ref
+  participant O as Optimizer (PPO)
+  D->>P: Prompt x
+  P->>P: Generate y
   P->>RM: (x, y)
-  RM-->>O: Reward r_φ(x, y)
-  P-->>O: Log-probabilities of y under π_θ
+  RM-->>O: Reward
+  P-->>O: log π_θ(y | x)
   P->>Ref: (x, y)
-  Ref-->>O: Log-probabilities of y under π_ref
-  O->>O: KL penalty β·KL(π_θ ‖ π_ref)
-  O->>O: Estimate advantage
+  Ref-->>O: log π_ref(y | x)
+  O->>O: KL penalty
+  O->>O: Advantage
   O->>P: Update θ
 `}
 />

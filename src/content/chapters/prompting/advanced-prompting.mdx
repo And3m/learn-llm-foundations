@@ -88,20 +88,20 @@ Retrieval-augmented generation (RAG) does these steps:
   chart={`
 sequenceDiagram
   actor User
-  participant App as Application
+  participant App as App
   participant Ret as Retriever
   participant LLM
   participant Tool
   User->>App: Question
   App->>Ret: Search query
   Ret-->>App: Ranked passages
-  App->>LLM: Instruction + passages + question
-  LLM-->>App: Tool call with arguments
-  App->>App: Validate tool name, arguments, permissions
+  App->>LLM: Prompt + passages
+  LLM-->>App: Tool call
+  App->>App: Check name, args, permissions
   App->>Tool: Run the call
-  Tool-->>App: Result (untrusted data)
+  Tool-->>App: Result (untrusted)
   App->>LLM: Tool result
-  LLM-->>App: Answer with citations
+  LLM-->>App: Answer + citations
   App-->>User: Answer
 `}
 />

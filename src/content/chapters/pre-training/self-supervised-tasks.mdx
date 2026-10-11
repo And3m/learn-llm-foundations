@@ -128,20 +128,20 @@ The encoder reads the full source sequence. The decoder generates the target fro
   chart={`
 classDiagram
   class DecoderOnly {
-    attention: causal, left context only
-    objective: next-token prediction
-    strength: open-ended generation
+    attention: causal
+    objective: next token
+    use: generation
   }
   class EncoderOnly {
-    attention: bidirectional, full input
-    objective: masked token recovery
-    strength: classification and labeling
+    attention: bidirectional
+    objective: masked tokens
+    use: classification
   }
   class EncoderDecoder {
-    encoder: bidirectional on the source
-    decoder: causal on the target
-    objective: denoising or text-to-text
-    strength: sequence-to-sequence tasks
+    encoder: bidirectional
+    decoder: causal
+    objective: denoising
+    use: seq-to-seq
   }
   Transformer <|-- DecoderOnly
   Transformer <|-- EncoderOnly

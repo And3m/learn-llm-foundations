@@ -47,7 +47,7 @@ The source book uses $\hat{\theta}$ for the learned parameters. Keep the two sym
 flowchart TB
   A[Large unlabeled corpus] --> B[Pre-training objective]
   B --> C[Pre-trained parameters θ̂]
-  C --> D{Adaptation method}
+  C --> D([Adaptation method])
   D -->|Update weights| E[Fine-tuned model]
   D -->|Change the input| F[Prompted model]
   E --> G[Downstream task]
