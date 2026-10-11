@@ -26,7 +26,7 @@ export function SiteHeader() {
             <div className="mobile-menu__panel">
               <nav aria-label="Mobile navigation">
                 {links.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
-                <Link href="/resources/foundations-of-large-language-models.pdf"><BookIcon /> Source PDF</Link>
+                <a href="/resources/foundations-of-large-language-models.pdf"><BookIcon /> Source PDF</a>
               </nav>
               <ProfileLinks variant="menu" />
             </div>

@@ -10,5 +10,5 @@ const resources = [
 ];
 
 export default function ReadingPage() {
-  return <main className="page-shell"><header className="page-header"><span className="eyebrow">Sources, not rabbit holes</span><h1>Further reading</h1><p>Start with the source book, then follow the primary material when you want the derivations, experiments, and historical context.</p></header><div className="resource-grid">{resources.map((resource) => <a className="resource-card" href={resource.href} target={resource.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer" key={resource.title}><small>{resource.type}</small><h2>{resource.title} ↗</h2><p>{resource.description}</p></a>)}</div></main>;
+  return <main className="page-shell"><header className="page-header"><span className="eyebrow">Sources, not rabbit holes</span><h1>Further reading</h1><p>Start with the source book. Then read the primary material when you want the derivations, the experiments and the historical context.</p></header><div className="resource-grid">{resources.map((resource) => <a className="resource-card" href={resource.href} target={resource.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer" key={resource.title}><small>{resource.type}</small><h2>{resource.title} ↗</h2><p>{resource.description}</p></a>)}</div></main>;
 }

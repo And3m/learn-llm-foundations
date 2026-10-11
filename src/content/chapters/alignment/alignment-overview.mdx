@@ -1,25 +1,78 @@
 import { PreferenceLab } from "@/components/simulators/preference-lab"
 
-Pre-training teaches a model to predict text from a broad corpus. An assistant is judged by a different standard: whether it understands the request, provides useful and truthful help, follows legitimate constraints, and handles unsafe or uncertain situations appropriately. Alignment methods introduce training signals that better represent those desired behaviors.
+Pre-training teaches a model to predict text from a large corpus. But people evaluate an assistant with a different standard. They ask these questions:
+
+- Does it understand the request?
+- Does it give useful and true help?
+- Does it follow legitimate limits?
+- Does it correctly handle situations that are unsafe or not certain?
+
+Alignment methods add training signals that represent these desired behaviors better.
 
 <h2 id="objective-gap">The objective gap</h2>
 
-Next-token likelihood is available at enormous scale, but it rewards imitation of the training distribution rather than the intent of a particular user. Text on the web contains contradictions, low-quality answers, unsafe instructions, and many styles that are inappropriate for an assistant. A response can be probable yet unhelpful, polished yet false, or safe in one context and obstructive in another.
+There is a very large quantity of data for next-token likelihood. But this objective rewards a copy of the training distribution. It does not reward the intent of one user. Web text contains contradictions, bad answers, unsafe instructions and many styles that are not correct for an assistant. Thus, a response can have these problems:
 
-Alignment uses richer signals: demonstrations of desirable responses, comparisons between candidates, critiques, written principles, step-level feedback, and evaluations of capabilities and risks. These signals are still incomplete proxies. Terms such as helpfulness and harmlessness depend on context, and annotators can legitimately disagree.
+- It can be probable but not helpful.
+- It can be well written but false.
+- It can be safe in one context but block the user in a different context.
+
+Alignment uses better signals:
+
+- Demonstrations of good responses.
+- Comparisons between candidates.
+- Critiques.
+- Written principles.
+- Feedback on each step.
+- Evaluations of skills and risks.
+
+These signals are still incomplete proxies. Words such as "helpful" and "harmless" depend on the context. Annotators can disagree for good reasons.
 
 <PreferenceLab />
 
 <h2 id="alignment-pipeline">The alignment pipeline</h2>
 
-A common pipeline begins with supervised fine-tuning on instruction-response demonstrations. This teaches the conversational interface and supplies a capable initial policy. Preference data then distinguishes better responses from worse ones. Classic RLHF fits a reward model to those comparisons and uses reinforcement learning to improve the policy. Direct preference methods optimize the policy from the comparisons without a separate online reinforcement-learning loop.
+A usual pipeline has these stages:
 
-The aligned policy remains tied to a reference model. Moving too far can reduce fluency, diversity, or useful capabilities, so objectives often include an explicit or implicit constraint on policy drift. Evaluation must compare the resulting behavior on both target preferences and retained capabilities.
+1. **Supervised fine-tuning (SFT):** Train on instruction-response demonstrations. This teaches the conversation interface and gives a capable initial policy.
+2. **Preference data:** Collect comparisons that show which responses are better and which are worse.
+3. **Preference optimization:** Classic RLHF trains a reward model on these comparisons. Then it uses reinforcement learning to make the policy better. Direct preference methods optimize the policy from the comparisons. They do not need a separate online reinforcement-learning loop.
 
-<h2 id="limits">Limits</h2>
+<MermaidDiagram
+  title="The alignment pipeline"
+  caption="SFT gives a starting policy. Preference data then trains the policy through a reward model and RL, or directly with DPO. A reference model limits how far the policy moves."
+  chart={`
+flowchart TB
+  B[Pre-trained base model] --> S[SFT on demonstrations]
+  S --> R0[Reference policy]
+  S --> C[Collect preference comparisons]
+  C --> RM[Train reward model]
+  RM --> RL[RL policy optimization]
+  C --> DPO[Direct preference optimization]
+  R0 -.->|KL limit| RL
+  R0 -.->|implicit limit| DPO
+  RL --> A[Aligned policy]
+  DPO --> A
+  A --> E[Evaluate preferences and kept skills]
+`}
+/>
 
-No finite dataset captures every culture, user, conflict, or future deployment. A reward model can learn superficial shortcuts, a policy can exploit its scorer, and synthetic feedback can reproduce the evaluator’s blind spots. Alignment can also trade usefulness against caution or favor one group’s preferences over another’s.
+The aligned policy stays connected to a reference model. If the policy moves too far, it can lose fluency, diversity or useful skills. Thus, objectives often include an explicit or implicit limit on policy movement. Evaluation must compare the result on two things: the target preferences and the skills that the model must keep.
 
-The practical target is therefore a defensible behavior policy for a stated context, not proof that a model possesses human values. Document the intended policy, measure disagreement and edge cases, red-team the full system, and monitor behavior after deployment.
+<h2 id="limits">What alignment can guarantee</h2>
+
+No finite dataset includes all cultures, users, conflicts or future deployments. These problems can occur:
+
+- A reward model can learn shallow shortcuts.
+- A policy can exploit its scorer.
+- Synthetic feedback can copy the blind spots of the evaluator.
+- Alignment can exchange usefulness for caution, or prefer the preferences of one group.
+
+Thus, the practical target is a behavior policy that you can defend for a stated context. It is not proof that a model has human values. Do these steps:
+
+1. Write down the intended policy.
+2. Measure disagreement and edge cases.
+3. Do red-team tests on the full system.
+4. Monitor the behavior after deployment.
 
 <SourceNote pages="155-156" />

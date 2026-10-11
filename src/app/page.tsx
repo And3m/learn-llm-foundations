@@ -21,7 +21,7 @@ export default function HomePage() {
         <section className="home-intro">
           <p className="eyebrow">Foundations, made tangible</p>
           <h2>See how language models learn.</h2>
-          <p className="lede">A visual companion to <em>Foundations of Large Language Models</em>. Read the core ideas in plain language, then manipulate the objectives and systems that make them work.</p>
+          <p className="lede">A visual companion to <em>Foundations of Large Language Models</em>. Read the main ideas in Simplified Technical English. Then use the diagrams and labs to see the objectives and systems at work.</p>
           <div className="home-stats">
             <div><strong>{chapters.length}</strong><span>complete chapters</span></div>
             <div><strong>{getAllLessons().length}</strong><span>focused lessons</span></div>

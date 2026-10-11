@@ -1,14 +1,21 @@
 import { ObjectiveExplorer } from "@/components/simulators/objective-explorer"
+import { AttentionAccessDiagram } from "@/components/diagrams/pre-training"
 
-Self-supervision turns ordinary text into training data by deciding what information the model may see and what information it must recover. That design choice creates an **inductive bias**: it shapes which dependencies are easy to learn and which downstream behaviors fit the model naturally.
+Self-supervision makes training data from ordinary text. The design decides two things: what the model can see, and what the model must recover. This decision gives an **inductive bias**. The bias controls which dependencies are easy to learn and which downstream tasks fit the model.
 
 <Callout title="Learning objectives">
-  <p>By the end of this lesson, you should be able to derive the causal and masked objectives, explain how attention access differs across architectures, compare common corruption schemes, and select an objective for a target workload.</p>
+  <p>After this lesson, you can do these tasks:</p>
+  <ul>
+    <li>Derive the causal objective and the masked objective.</li>
+    <li>Explain how attention access is different in each architecture.</li>
+    <li>Compare the usual corruption methods.</li>
+    <li>Select an objective for a target workload.</li>
+  </ul>
 </Callout>
 
 <h2 id="decoder-only">Decoder-only pre-training</h2>
 
-A decoder-only Transformer removes the encoder-decoder cross-attention path and uses causal self-attention. At position $i$, the network may inspect $x_0,\ldots,x_i$ but not later tokens. It produces a distribution for the next token:
+A decoder-only Transformer does not have the encoder-decoder cross-attention path. It uses causal self-attention. At position $i$, the network can see $x_0,\ldots,x_i$. It cannot see the tokens after position $i$. It gives a probability distribution for the next token:
 
 $$
 p^\theta_{i+1}
@@ -16,7 +23,9 @@ p^\theta_{i+1}
 \Pr_\theta(\cdot\mid x_0,\ldots,x_i)
 $$
 
-For a sequence $x=(x_0,\ldots,x_m)$, the training loss sums token-level cross-entropy:
+This is the probability of each possible next token, given all the tokens up to position $i$.
+
+For a sequence $x=(x_0,\ldots,x_m)$, the training loss adds the cross-entropy of each token:
 
 $$
 \mathcal{L}_{\mathrm{causal}}(x)
@@ -25,7 +34,9 @@ $$
 \log \Pr_\theta(x_{i+1}\mid x_0,\ldots,x_i)
 $$
 
-Minimizing this loss is equivalent to maximizing the likelihood of the observed sequence because the chain rule factorizes its probability:
+The loss is large when the model gives a low probability to the correct next token.
+
+When you minimize this loss, you also maximize the likelihood of the observed sequence. The chain rule divides the sequence probability into a product of next-token probabilities:
 
 $$
 \Pr_\theta(x)
@@ -34,9 +45,9 @@ $$
 \Pr_\theta(x_{i+1}\mid x_0,\ldots,x_i)
 $$
 
-### One sequence yields many targets
+### One sequence gives many targets
 
-If the training text is “models learn from data,” the model receives a target at nearly every position:
+Use the training text "models learn from data". The model gets a target at almost each position:
 
 | Visible context | Target |
 | --- | --- |
@@ -44,24 +55,28 @@ If the training text is “models learn from data,” the model receives a targe
 | models learn | from |
 | models learn from | data |
 
-Teacher forcing lets all these predictions be evaluated in parallel during training, because the correct previous tokens are already known. Generation is different: after producing one new token, the model appends it to the context and runs the next step. This training-generation match is a major reason decoder-only models are natural open-ended generators.
+During training, the correct previous tokens are already known. Thus, **teacher forcing** lets the model calculate all these predictions in parallel. Generation is different. The model makes one new token, adds it to the context, and then does the next step. Training and generation use the same left-to-right pattern. This is a main reason why decoder-only models are good at open-ended generation.
 
-The causal mask also creates a limitation. The representation at a position cannot use right context, even when the final application has the entire sentence. A decoder can still solve understanding tasks through prompting, but its pre-training access pattern is optimized for continuation.
+The causal mask also gives a limit. The representation at a position cannot use the tokens on its right. This is true even when the application has the full sentence. A decoder can still do understanding tasks through prompting. But its pre-training access pattern is optimized for continuation.
+
+<AttentionAccessDiagram />
 
 <h2 id="encoder-only">Encoder-only pre-training</h2>
 
-An encoder reads the whole visible sequence and returns contextual states:
+An encoder reads the full visible sequence and gives context states:
 
 $$
 H = \operatorname{Encoder}_\theta(x)
 = (h_0,\ldots,h_m)
 $$
 
-Because every token is already visible, simply asking the model to reproduce a visible token would be trivial. Encoder pre-training therefore creates missing or corrupted information and attaches a prediction layer during training. The prediction layer is later removed; the encoder representations are retained.
+The encoder gives one context state $h_i$ for each token, and each state can use all the visible tokens.
+
+All the tokens are visible. Thus, a task that asks the model to copy a visible token is too easy. Encoder pre-training removes or damages some information. It also adds a prediction layer during training. After training, you remove the prediction layer and keep the encoder representations.
 
 ### Masked language modeling
 
-Let $A(x)$ be a sampled set of token positions and let $\bar{x}$ be the corrupted sequence. The masked language modeling objective is
+$A(x)$ is a sampled set of token positions. $\bar{x}$ is the damaged (corrupted) sequence. The masked language modeling (MLM) objective is:
 
 $$
 \mathcal{L}_{\mathrm{MLM}}
@@ -70,29 +85,31 @@ $$
 \log \Pr_{\theta,W}(x_i\mid\bar{x})
 $$
 
-Only selected positions contribute to the loss. Unlike causal language modeling, each prediction can use visible tokens on both sides. In “The early bird catches the worm,” masking “early” and “worm” creates prediction problems that depend on grammar and meaning across the sentence.
+The loss uses only the selected positions. At each one, the model must predict the original token $x_i$ from the corrupted sequence $\bar{x}$.
 
-Masked language modeling has two important weaknesses:
+Causal language modeling uses only the left context. In MLM, each prediction can use the visible tokens on the two sides. In "The early bird catches the worm", you can mask "early" and "worm". The model must then use grammar and meaning from the full sentence to predict them.
 
-1. **Pre-training/inference mismatch.** The special mask token appears during pre-training but normally not during downstream use.
-2. **Independent masked predictions.** When several positions are hidden, a basic encoder predicts each original token from the same corrupted input rather than generating the hidden tokens conditionally in sequence.
+MLM has two weaknesses:
 
-### Permuted and discriminative alternatives
+1. **Pre-training and inference do not match.** The special mask token occurs during pre-training. Usually, it does not occur during downstream use.
+2. **The masked predictions are independent.** When the input hides more than one position, a basic encoder predicts each original token from the same corrupted input. It does not generate the hidden tokens one after the other.
 
-Permuted language modeling changes the prediction order rather than inserting a permanent mask pattern. A model predicts tokens autoregressively under sampled factorization orders, gaining access to varied contexts while preserving a sequential objective.
+### Permuted and discriminative objectives
 
-Discriminative objectives turn corruption into classification:
+Permuted language modeling changes the prediction order. It does not insert a permanent mask pattern. The model predicts tokens one by one, in a sampled order. Thus, it sees many different contexts and still keeps a sequential objective.
 
-- **Next-sentence prediction** asks whether one segment follows another.
-- **Sentence comparison** scores the relationship between two encoded sentences.
-- **Token classification** predicts a property for every position.
-- **Replaced-token detection** uses a small generator to substitute plausible tokens, then trains a discriminator to decide whether each observed token is original or replaced.
+Discriminative objectives change corruption into a classification task:
 
-Replaced-token detection can provide a learning signal at every position rather than only at masked positions. Its generator-discriminator setup is more complex, however, and the generator is discarded after pre-training.
+- **Next-sentence prediction** asks if one segment follows a different segment.
+- **Sentence comparison** gives a score to the relation between two encoded sentences.
+- **Token classification** predicts a property for each position.
+- **Replaced-token detection** uses a small generator to replace some tokens with probable tokens. Then a discriminator learns to find which tokens are original and which are replaced.
+
+Replaced-token detection gives a learning signal at each position, not only at masked positions. But the generator-discriminator setup is more complex. Also, you discard the generator after pre-training.
 
 <h2 id="encoder-decoder">Encoder-decoder pre-training</h2>
 
-An encoder-decoder model gives the input and output separate roles:
+An encoder-decoder model gives the input and the output different functions:
 
 $$
 y
@@ -101,11 +118,40 @@ y
 \left(\operatorname{Encode}_\theta(x)\right)
 $$
 
-The encoder reads the full source sequence. The decoder generates the target from left to right while attending to the encoded source. This architecture is a direct fit for translation, summarization, rewriting, and other sequence-to-sequence problems.
+The encoder changes the input $x$ into states, and the decoder generates the output $y$ from these states.
 
-### A unified text-to-text interface
+The encoder reads the full source sequence. The decoder generates the target from left to right and attends to the encoded source. This architecture fits translation, summarization, rewriting and other sequence-to-sequence problems directly.
 
-Many tasks can be represented as
+<MermaidDiagram
+  title="Three Transformer architecture families"
+  caption="Each family has a different attention pattern. The pre-training objective must agree with this pattern."
+  chart={`
+classDiagram
+  class DecoderOnly {
+    attention: causal, left context only
+    objective: next-token prediction
+    strength: open-ended generation
+  }
+  class EncoderOnly {
+    attention: bidirectional, full input
+    objective: masked token recovery
+    strength: classification and labeling
+  }
+  class EncoderDecoder {
+    encoder: bidirectional on the source
+    decoder: causal on the target
+    objective: denoising or text-to-text
+    strength: sequence-to-sequence tasks
+  }
+  Transformer <|-- DecoderOnly
+  Transformer <|-- EncoderOnly
+  Transformer <|-- EncoderDecoder
+`}
+/>
+
+### One text-to-text interface for many tasks
+
+You can write many tasks in this form:
 
 $$
 \text{instruction + source text}
@@ -113,25 +159,31 @@ $$
 \text{target text}
 $$
 
-A translation request produces a translated sentence, a classification request produces a label as text, and a scoring request can produce a textual number. This unifies task interfaces: architecture and loss remain stable while the instruction and expected output define the task.
+The model reads an instruction with a source text and writes a target text.
 
-During self-supervised pre-training, the model can receive a corrupted source and generate the missing or original content. Common formats include:
+- A translation request gives a translated sentence.
+- A classification request gives a label as text.
+- A scoring request can give a number as text.
 
-- **BERT-style reconstruction:** encode a masked sequence and generate the selected tokens.
-- **MASS-style reconstruction:** mask a continuous fragment and generate that fragment.
-- **Sentinel or span corruption:** replace each missing span with a distinct placeholder and generate placeholders plus the removed spans.
+This gives all tasks the same interface. The architecture and the loss stay the same. The instruction and the expected output define the task.
 
-Span-level targets are efficient because the decoder produces only missing content instead of reconstructing every visible token. They also require the model to infer how much text belongs in each missing region.
+During self-supervised pre-training, the model can get a corrupted source. It then generates the missing content or the original content. These are the usual formats:
+
+- **BERT-style reconstruction:** Encode a masked sequence and generate the selected tokens.
+- **MASS-style reconstruction:** Mask one continuous fragment and generate this fragment.
+- **Sentinel or span corruption:** Replace each missing span with a different placeholder. Then generate the placeholders and the removed spans.
+
+Span-level targets are efficient, because the decoder generates only the missing content. It does not rebuild each visible token. But the model must also find how much text goes into each missing area.
 
 <ObjectiveExplorer />
 
-<Callout title="Architecture follows information access">
-  <p>Causal decoders hide the future, masked encoders hide selected evidence, and encoder-decoders separate complete source reading from autoregressive target generation. The objective must respect the architecture's attention pattern.</p>
+<Callout title="The architecture follows the information access">
+  <p>Causal decoders hide the future. Masked encoders hide selected evidence. Encoder-decoders read the full source and then generate the target one token at a time. The objective must agree with the attention pattern of the architecture.</p>
 </Callout>
 
 <h2 id="denoising-objectives">Denoising objectives</h2>
 
-Denoising autoencoding applies a corruption function $C$ to produce $x_{\mathrm{noise}}=C(x)$, then trains the model to reconstruct the clean sequence:
+Denoising autoencoding uses a corruption function $C$ to make a noisy input, $x_{\mathrm{noise}}=C(x)$. Then it trains the model to rebuild the clean sequence:
 
 $$
 (\hat{\theta},\hat{\omega})
@@ -144,49 +196,56 @@ x
 \right)
 $$
 
+Training finds the parameters that make the rebuilt output from the noisy input most similar to the clean sequence $x$.
+
 The corruption function controls what the network must learn.
 
-| Corruption | What changes | Capability encouraged |
+| Corruption | What changes | Skill that the model learns |
 | --- | --- | --- |
-| Token masking | Selected tokens become mask symbols | Recover local missing content |
-| Token deletion | Selected tokens disappear completely | Infer both content and position |
-| Span masking | Contiguous spans become one placeholder | Reconstruct variable-length phrases |
-| Sentence reordering | Sentence order is permuted | Recover document-level order |
-| Document rotation | A random token becomes the apparent start | Identify global sequence structure |
+| Token masking | Selected tokens become mask symbols | Recover missing local content |
+| Token deletion | Selected tokens are fully removed | Find the content and its position |
+| Span masking | Continuous spans become one placeholder | Rebuild phrases of different lengths |
+| Sentence reordering | The sentence order is mixed | Recover the order of the document |
+| Document rotation | A random token becomes the start | Find the global structure of the sequence |
 
-Corruptions can be mixed across training samples. Harder corruption is not automatically better: excessive noise can remove the evidence needed to reconstruct the input, while trivial corruption provides a weak learning signal. Mask rate, span length, and corruption mixture are therefore hyperparameters, not incidental preprocessing.
+You can mix corruptions across training samples. Harder corruption is not always better:
 
-### Worked denoising example
+- Too much noise can remove the evidence that the model needs to rebuild the input.
+- Too little corruption gives a weak learning signal.
 
-Start from:
+Thus, the mask rate, the span length and the corruption mix are hyperparameters. They are not small preprocessing details.
+
+### Example: denoising
+
+Start with this sentence:
 
 > Reliable systems test assumptions before deployment.
 
-A span-corrupted input could be:
+A span-corrupted input can be:
 
 > Reliable systems [MASK] before deployment.
 
-An encoder-only model predicts the hidden tokens at aligned positions. An encoder-decoder model can instead generate “test assumptions” as a target sequence. The visible evidence is similar, but the output interface and probability factorization differ.
+An encoder-only model predicts the hidden tokens at their aligned positions. An encoder-decoder model can generate "test assumptions" as a target sequence. The visible evidence is almost the same. But the output interface and the probability factorization are different.
 
 <h2 id="choosing-an-objective">Comparing objectives</h2>
 
-Objectives and architectures are related, but they are not identical categories. Masking can train encoders or encoder-decoders; classification objectives can sit on top of different representation networks. The useful comparison is therefore: **what is hidden, what is predicted, and in what order?**
+Objectives and architectures are related, but they are not the same categories. Masking can train encoders or encoder-decoders. Classification objectives can use different representation networks. Thus, compare objectives with these three questions: **What is hidden? What is predicted? In which order?**
 
-| Objective | Evidence available | Prediction order | Natural strength |
+| Objective | Available evidence | Prediction order | Natural strength |
 | --- | --- | --- | --- |
 | Causal language modeling | Left context | Left to right | Open-ended continuation |
-| Masked language modeling | Visible left and right context | Selected positions, usually parallel | Bidirectional representation |
-| Permuted language modeling | Context defined by a sampled order | Autoregressive under that order | Varied contextual prediction |
-| Discriminative corruption | Corrupted sequence | Labels per sequence or token | Dense representation learning |
-| Denoising autoencoding | Corrupted source sequence | Autoregressive reconstruction | Conditional generation |
+| Masked language modeling | Visible left and right context | Selected positions, usually in parallel | Bidirectional representation |
+| Permuted language modeling | Context from a sampled order | One by one, in that order | Prediction from many contexts |
+| Discriminative corruption | Corrupted sequence | Labels for each sequence or token | Dense representation learning |
+| Denoising autoencoding | Corrupted source sequence | One by one, to rebuild the source | Conditional generation |
 
-Choose the objective by tracing the final workload:
+To select an objective, examine the final workload:
 
-1. **Will the model produce free-form continuations?** Causal training matches that loop directly.
-2. **Will it rank, classify, or label a complete input?** Bidirectional encoding makes all visible context available.
-3. **Will it transform one sequence into another?** Encoder-decoder denoising gives source and target separate representations.
-4. **Is compute the bottleneck?** Compare how many positions receive loss, how much context is processed, and whether inference is parallel or autoregressive.
+1. **Will the model write free-form continuations?** Causal training matches this loop directly.
+2. **Will it rank, classify or label a full input?** Bidirectional encoding gives access to all the visible context.
+3. **Will it change one sequence into a different sequence?** Encoder-decoder denoising gives the source and the target separate representations.
+4. **Is compute the bottleneck?** Compare how many positions get a loss and how much context the model processes. Also, find if inference is parallel or one token at a time.
 
-Modern systems can cross these boundaries through fine-tuning and prompting, but pre-training still determines the model's default information access and output mechanics.
+Fine-tuning and prompting let modern systems go across these limits. But pre-training still sets the default information access and the output mechanics of the model.
 
 <SourceNote pages="7–20" />

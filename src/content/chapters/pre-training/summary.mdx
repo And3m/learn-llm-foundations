@@ -1,4 +1,10 @@
-Pre-training is a pipeline of connected decisions. Data supplies evidence, an objective turns that evidence into targets, architecture controls which evidence is visible, optimization produces reusable parameters, and adaptation turns those parameters into a task-specific system.
+Pre-training is a pipeline of connected decisions. Each part has one function:
+
+- Data gives evidence.
+- An objective changes this evidence into targets.
+- The architecture controls which evidence is visible.
+- Optimization makes parameters that you can use again.
+- Adaptation changes these parameters into a task-specific system.
 
 <h2 id="mental-model">The full learning pipeline</h2>
 
@@ -14,67 +20,104 @@ $$
 \text{evaluated system}
 $$
 
+Raw text becomes training targets, then learned parameters, then an adapted system, and then an evaluated system.
+
 Each arrow answers a different question:
 
-1. **Data:** Which languages, domains, and text patterns can the model observe?
-2. **Supervision:** What information is hidden or corrupted, and what must be predicted?
-3. **Architecture:** Can a position see left context, both directions, or an encoded source?
+1. **Data:** Which languages, domains and text patterns can the model see?
+2. **Supervision:** Which information is hidden or corrupted? What must the model predict?
+3. **Architecture:** Can a position see the left context, the two directions or an encoded source?
 4. **Optimization:** Which parameter setting minimizes the pre-training loss?
-5. **Adaptation:** Will the application freeze features, fine-tune parameters, or provide a prompt?
-6. **Evaluation:** Does the final system solve the intended task on representative data?
+5. **Adaptation:** Will the application freeze features, fine-tune parameters or give a prompt?
+6. **Evaluation:** Does the final system solve the intended task on data that represents the real use?
 
-The result is a foundation model, not a universal answer engine. Its usefulness depends on alignment between all six decisions.
+The result is a foundation model. It is not a machine that answers all questions. Its usefulness depends on agreement between all six decisions.
+
+<MermaidDiagram
+  title="Chapter 1 concept map"
+  caption="The main ideas of Chapter 1 and how they connect."
+  chart={`
+mindmap
+  root((Pre-training))
+    Supervision
+      Unsupervised
+      Supervised
+      Self-supervised
+    Architectures
+      Decoder-only
+        Causal LM
+      Encoder-only
+        BERT and MLM
+      Encoder-decoder
+        Denoising
+    Adaptation
+      Frozen features
+      Fine-tuning
+      Prompting
+    Risks
+      Overfitting
+      Forgetting
+      Data quality
+`}
+/>
 
 <h2 id="objective-guide">Objective and architecture map</h2>
 
-| Architecture | Typical pre-training signal | Information access | Directly suited output |
+| Architecture | Usual pre-training signal | Information access | Output that it gives directly |
 | --- | --- | --- | --- |
 | Decoder-only | Causal next-token prediction | Left context | Open-ended continuation |
-| Encoder-only | Masked or discriminative prediction | Visible tokens on both sides | Contextual representations |
-| Encoder-decoder | Span corruption or denoising | Full source plus generated prefix | Conditional target sequence |
+| Encoder-only | Masked or discriminative prediction | Visible tokens on the two sides | Context representations |
+| Encoder-decoder | Span corruption or denoising | Full source and the generated prefix | Conditional target sequence |
 
-The objective is more fundamental than the model label. Masked prediction can train multiple architectures, and discriminative tasks can be attached to many encoders. To understand a new method, ask:
+The objective is more basic than the model name. Masked prediction can train more than one architecture. Many encoders can use discriminative tasks. To understand a new method, ask these questions:
 
-- What is the uncorrupted example?
-- What transformation creates the model input?
-- Which outputs contribute to the loss?
-- Are outputs predicted independently, in parallel, or autoregressively?
-- Which information is blocked by attention masks?
+- What is the example before corruption?
+- Which change makes the model input?
+- Which outputs add to the loss?
+- Does the model predict the outputs independently, in parallel or one by one?
+- Which information do the attention masks block?
 
-<Callout title="A durable diagnostic">
-  <p>When two methods look similar, compare their probability factorization. The order and conditioning of predictions often explain more than the product name.</p>
+<Callout title="A diagnostic that you can always use">
+  <p>When two methods look similar, compare their probability factorization. The order of the predictions and their conditions often explain more than the product name.</p>
 </Callout>
 
 <h2 id="adaptation-guide">Adaptation map</h2>
 
-Pre-training and downstream learning solve different optimization problems. The downstream head converts hidden states into the application's output space, while an update policy decides how much of the backbone may specialize.
+Pre-training and downstream learning solve different optimization problems:
 
-| Need | Representation to consume | Adaptation starting point |
+- The downstream head changes hidden states into the output space of the application.
+- An update policy decides how much of the backbone can become specialized.
+
+| Need | Representation that the head uses | Start point for adaptation |
 | --- | --- | --- |
-| One label for a text | Sequence-level vector such as $h_{\mathrm{CLS}}$ | Classification head |
+| One label for a text | A sequence-level vector, for example $h_{\mathrm{CLS}}$ | Classification head |
 | Relation between two texts | Joint pair representation | Pair-classification head |
-| One label per token | Contextual token vectors | Sequence-labeling head |
-| Answer inside a passage | Context token vectors | Start/end span heads |
-| A transformed output sequence | Encoded source memory | Autoregressive decoder |
-| Fast task reuse with a generator | Next-token distribution | Instruction and demonstrations |
+| One label for each token | Context token vectors | Sequence-labeling head |
+| An answer inside a passage | Context token vectors | Start and end span heads |
+| A changed output sequence | Encoded source memory | Decoder that generates one token at a time |
+| Fast use of a generator for a task | Next-token distribution | Instruction and demonstrations |
 
-Freezing preserves general representations and lowers training cost. Full fine-tuning provides more task capacity but increases memory use and risks overfitting or forgetting. Prompting changes the context rather than the checkpoint, but relies on capabilities learned during pre-training and later alignment.
+Each adaptation method has a trade-off:
+
+- Freezing keeps the general representations and decreases the training cost.
+- Full fine-tuning gives more task capacity. But it uses more memory and can cause overfitting or forgetting.
+- Prompting changes the context, not the checkpoint. But it depends on skills that the model learned during pre-training and later alignment.
 
 <h2 id="open-problems">Limits and open problems</h2>
 
-Large-scale self-supervision made powerful language systems possible, but the chapter's framework also exposes its limits.
+Large-scale self-supervision made powerful language systems possible. But the framework of this chapter also shows its limits:
 
-- **The objective is only a proxy.** Predicting text rewards statistical compatibility, not guaranteed truth, safety, or reasoning.
-- **Data quality matters.** Scale cannot remove bias, duplication, imbalance, or missing coverage from the training distribution.
-- **Compute is unevenly available.** Larger models and corpora increase training, memory, and deployment requirements.
-- **Adaptation can damage prior capabilities.** Small or shifted datasets can cause overfitting and catastrophic forgetting.
-- **Evaluation remains task dependent.** Lower pre-training loss does not automatically mean better production behavior.
+- **The objective is only a proxy.** Text prediction rewards statistical fit. It does not guarantee truth, safety or reasoning.
+- **Data quality has a large effect.** Scale cannot remove bias, duplicates, imbalance or missing coverage from the training data.
+- **Not all teams have the same compute.** Larger models and corpora need more training, memory and deployment resources.
+- **Adaptation can damage earlier skills.** Small datasets, or datasets that are different from the original data, can cause overfitting and catastrophic forgetting.
+- **Evaluation depends on the task.** A lower pre-training loss does not always give better behavior in production.
 
-The source closes by identifying efficient learning from smaller datasets and stronger reasoning and planning as continuing research challenges. Pre-training provides the foundation, but it does not settle how intelligence should be acquired, controlled, or evaluated.
+At the end, the source book names two continuing research problems. The first is efficient learning from smaller datasets. The second is stronger reasoning and planning. Pre-training gives the foundation. But it does not decide how a system must get intelligence, or how to control and evaluate it.
 
 <h2 id="next">What comes next</h2>
 
-Chapter 1 established the reusable model lifecycle:
+Chapter 1 showed the life cycle of a model that you can use again:
 
 $$
 \text{pre-train}
@@ -84,8 +127,10 @@ $$
 \text{adapt}
 $$
 
-Chapter 2 focuses on the decoder-only branch that underlies modern generative LLMs. It follows next-token prediction through data preparation, model scaling, distributed training, long-sequence architectures, caches, and memory.
+First pre-train the model, then use it to represent or generate text, and then adapt it to a task.
 
-[Continue to Chapter 2](/chapters/generative-models) when you are ready to trace that generative pipeline. The [glossary](/glossary) provides quick definitions for the Chapter 1 vocabulary.
+Chapter 2 is about the decoder-only family, which is the base of modern generative LLMs. It follows next-token prediction through these topics: data preparation, model scaling, distributed training, long-sequence architectures, caches and memory.
+
+When you are ready to examine the generative pipeline, [continue to Chapter 2](/chapters/generative-models). The [glossary](/glossary) gives short definitions for the words in Chapter 1.
 
 <SourceNote pages="35" />

@@ -1,14 +1,28 @@
 import { BertMaskingLab } from "@/components/simulators/bert-masking-lab"
+import { BertMaskingDiagram } from "@/components/diagrams/pre-training"
 
-BERT is a concrete example of encoder-only pre-training. It combines a bidirectional Transformer encoder, a corruption-based token objective, and a sentence-pair objective to learn representations that can be reused across language-understanding tasks.
+BERT is a real example of encoder-only pre-training. It has three parts:
+
+- A bidirectional Transformer encoder.
+- A token objective that uses corruption.
+- An objective for sentence pairs.
+
+Together, these parts teach representations that many language-understanding tasks can use.
 
 <Callout title="Learning objectives">
-  <p>By the end of this lesson, you should be able to reconstruct BERT's input, compute its two training losses, explain the 15% and 80/10/10 masking rules, compare BERT Base and Large, and identify the main scaling, efficiency, and multilingual extensions.</p>
+  <p>After this lesson, you can do these tasks:</p>
+  <ul>
+    <li>Build the BERT input sequence.</li>
+    <li>Calculate the two BERT training losses.</li>
+    <li>Explain the 15% rule and the 80/10/10 masking rule.</li>
+    <li>Compare BERT Base and BERT Large.</li>
+    <li>Name the main extensions for scale, efficiency and many languages.</li>
+  </ul>
 </Callout>
 
 <h2 id="standard-bert">The standard model</h2>
 
-The standard training objective is the sum of masked language modeling and next-sentence prediction:
+The standard training objective adds the masked language modeling loss and the next-sentence prediction loss:
 
 $$
 \mathcal{L}_{\mathrm{BERT}}
@@ -18,33 +32,45 @@ $$
 \mathcal{L}_{\mathrm{NSP}}
 $$
 
-The model is a stack of Transformer encoder blocks. Since encoder self-attention is bidirectional, every visible token can influence every other token's representation. BERT does not generate a sequence from left to right during pre-training; it restores selected tokens and classifies a relationship between two text segments.
+The total BERT loss is the MLM loss plus the NSP loss.
+
+The model is a stack of Transformer encoder blocks. Encoder self-attention is bidirectional. Thus, each visible token can change the representation of each other token. During pre-training, BERT does not generate a sequence from left to right. It does two tasks:
+
+- It restores selected tokens.
+- It classifies the relation between two text segments.
 
 ### Input sequence
 
-A single sentence or sentence pair is arranged with special tokens:
+BERT puts special tokens around one sentence or a pair of sentences:
 
 $$
 [\mathrm{CLS}]\ \mathrm{Sent}_A\ [\mathrm{SEP}]\ \mathrm{Sent}_B\ [\mathrm{SEP}]
 $$
 
-- $[\mathrm{CLS}]$ marks the beginning. Its final state $h_{\mathrm{CLS}}$ is treated as a sequence-level representation.
-- $[\mathrm{SEP}]$ marks segment boundaries.
-- WordPiece tokenization breaks uncommon words into subword units so the vocabulary can cover many surface forms without storing every whole word.
+The input starts with $[\mathrm{CLS}]$, and $[\mathrm{SEP}]$ follows each sentence.
 
-The output is a contextual vector at every position. A vocabulary projection reads selected token vectors during masked pre-training, while a small classifier reads $h_{\mathrm{CLS}}$ during next-sentence prediction.
+- $[\mathrm{CLS}]$ shows the start. BERT uses its final state $h_{\mathrm{CLS}}$ as the representation of the full sequence.
+- $[\mathrm{SEP}]$ shows the boundary of each segment.
+- WordPiece tokenization divides rare words into subword units. Thus, the vocabulary can cover many word forms and does not have to store each full word.
+
+The output is one context vector at each position. Two parts read these vectors:
+
+- During masked pre-training, a vocabulary projection reads the selected token vectors.
+- During next-sentence prediction, a small classifier reads $h_{\mathrm{CLS}}$.
 
 <h2 id="training-losses">MLM and NSP losses</h2>
 
 ### Masked language modeling
 
-BERT randomly selects **15% of input tokens** as prediction targets. Selection does not mean every chosen token becomes $[\mathrm{MASK}]$:
+BERT selects **15% of the input tokens** at random as prediction targets. A selected token does not always become $[\mathrm{MASK}]$:
 
-- **80%** are replaced with $[\mathrm{MASK}]$.
-- **10%** are replaced with a random vocabulary token.
-- **10%** remain unchanged.
+- BERT replaces **80%** of the selected tokens with $[\mathrm{MASK}]$.
+- BERT replaces **10%** with a random token from the vocabulary.
+- BERT does not change the remaining **10%**.
 
-Let $A(x)$ be the selected positions and $\bar{x}$ the modified input. The loss is
+<BertMaskingDiagram />
+
+$A(x)$ is the set of selected positions. $\bar{x}$ is the changed input. The loss is:
 
 $$
 \mathcal{L}_{\mathrm{MLM}}
@@ -53,13 +79,21 @@ $$
 \log \Pr_i(x_i\mid\bar{x})
 $$
 
-The 80% branch creates a clear missing-token task. Random replacement teaches recovery from misleading evidence. Leaving some selected tokens unchanged prevents the model from assuming that only explicit mask symbols require careful representation. Together, the latter two branches reduce the mismatch between pre-training inputs and ordinary downstream inputs, which contain no $[\mathrm{MASK}]$ token.
+The loss adds the negative log probability of the original token at each selected position.
 
-### Worked masking calculation
+Each part of the 80/10/10 rule has a function:
 
-Suppose a 20-token sequence selects three positions, which is approximately 15%. If two selected tokens are masked and one is replaced randomly, the model still predicts the **original** token at all three positions. Visible positions do not contribute to this MLM loss.
+- The 80% part makes a clear task: find the missing token.
+- The random 10% teaches the model to recover from wrong evidence.
+- The unchanged 10% stops the model from a wrong assumption: that only mask symbols need a careful representation.
 
-If the correct-token probabilities at the three selected positions are $0.70$, $0.50$, and $0.20$, then
+The last two parts also make the pre-training input more similar to downstream input. Downstream input does not contain the $[\mathrm{MASK}]$ token.
+
+### Example: a masking calculation
+
+A sequence has 20 tokens. BERT selects three positions, which is approximately 15%. Two selected tokens become masks, and one becomes a random token. The model still predicts the **original** token at all three positions. The visible positions do not add to this MLM loss.
+
+The probabilities of the correct tokens at the three selected positions are $0.70$, $0.50$ and $0.20$. Thus:
 
 $$
 \mathcal{L}_{\mathrm{MLM}}
@@ -67,11 +101,18 @@ $$
 -\left(\log 0.70+\log 0.50+\log 0.20\right)
 $$
 
-A confident wrong prediction is penalized strongly because the negative log grows rapidly as the correct probability approaches zero.
+The loss for this sequence is approximately $0.36 + 0.69 + 1.61 = 2.66$ (natural log).
+
+A confident wrong prediction gets a large penalty. The negative log increases quickly when the probability of the correct token goes near zero.
 
 ### Next-sentence prediction
 
-NSP classifies a segment pair as either $IsNext$ or $NotNext$. A positive sample contains a genuine continuation; a negative sample pairs unrelated text. A classifier on $h_{\mathrm{CLS}}$ produces $\Pr(c\mid h_{\mathrm{CLS}})$:
+Next-sentence prediction (NSP) classifies a pair of segments as $IsNext$ or $NotNext$.
+
+- A positive sample contains a real continuation.
+- A negative sample puts unrelated text together.
+
+A classifier on $h_{\mathrm{CLS}}$ gives $\Pr(c\mid h_{\mathrm{CLS}})$:
 
 $$
 \mathcal{L}_{\mathrm{NSP}}
@@ -79,7 +120,9 @@ $$
 -\log \Pr(c_{\mathrm{gold}}\mid h_{\mathrm{CLS}})
 $$
 
-NSP was intended to encourage sentence-level relation modeling. Later scaling studies showed that it could be removed without hurting downstream performance when the rest of the recipe was strengthened. That result is important: every auxiliary objective should justify its cost empirically.
+The NSP loss is small when the classifier gives a high probability to the correct class.
+
+The function of NSP was to teach relations between sentences. Later scaling studies showed a different result. When the rest of the recipe was stronger, you could remove NSP and downstream performance did not decrease. This result gives a general rule: each auxiliary objective must show by experiment that it is worth its cost.
 
 <h2 id="model-setup">Input and model setup</h2>
 
@@ -89,83 +132,125 @@ $$
 e_i = e_i^{\mathrm{token}} + e_i^{\mathrm{position}} + e_i^{\mathrm{segment}}
 $$
 
+BERT adds the token, position and segment vectors to get the input vector at position $i$.
+
 - **Token embedding:** identifies the WordPiece token.
-- **Position embedding:** identifies its sequence position.
-- **Segment embedding:** marks whether it belongs to sentence A or B.
+- **Position embedding:** identifies the position of the token in the sequence.
+- **Segment embedding:** shows if the token is in sentence A or sentence B.
 
-The vectors pass through $L$ Transformer layers. Each layer contains multi-head self-attention and a feed-forward network with residual connections and layer normalization. The final hidden size $d$ determines the width of each contextual representation.
+<MermaidDiagram
+  title="How BERT builds each input vector"
+  caption="Three embeddings are added for each token. The sum goes through L encoder layers. The result is one context vector for each position."
+  chart={`
+flowchart TB
+  T["Token embedding<br/>(which WordPiece)"] --> S((+))
+  P["Position embedding<br/>(where in the sequence)"] --> S
+  G["Segment embedding<br/>(sentence A or B)"] --> S
+  S --> E["Input vector e_i"]
+  E --> L["L Transformer encoder layers"]
+  L --> H["Context vector h_i"]
+`}
+/>
 
-Important model choices include vocabulary size $|V|$, embedding size $d_e$, hidden size $d$, attention-head count $n_{\mathrm{head}}$, feed-forward size $d_{\mathrm{ffn}}$, maximum input length, and depth $L$. Increasing them can improve capacity, but also raises parameter memory and training cost.
+The vectors go through $L$ Transformer layers. Each layer contains multi-head self-attention and a feed-forward network. Each layer also has residual connections and layer normalization. The final hidden size $d$ sets the width of each context representation.
+
+These are the main model choices:
+
+- Vocabulary size $|V|$.
+- Embedding size $d_e$.
+- Hidden size $d$.
+- Number of attention heads $n_{\mathrm{head}}$.
+- Feed-forward size $d_{\mathrm{ffn}}$.
+- Maximum input length.
+- Depth $L$.
+
+Larger values can increase capacity. But they also increase the parameter memory and the training cost.
 
 | Model | Layers $L$ | Hidden size $d$ | Attention heads | Parameters |
 | --- | ---: | ---: | ---: | ---: |
 | BERT Base | 12 | 768 | 12 | 110M |
 | BERT Large | 24 | 1,024 | 16 | 340M |
 
-BERT Large is not simply “twice BERT Base.” Greater depth and width interact with optimization, memory, data volume, and training stability. A practical training schedule may begin with shorter sequences for many steps and use full-length sequences later, reducing early compute while still exposing the model to long inputs.
+BERT Large is not only "two times BERT Base". More depth and width have effects on optimization, memory, data volume and training stability. A practical training schedule can start with shorter sequences for many steps. Later, it uses full-length sequences. This decreases the compute at the start, and the model still sees long inputs.
 
-<Callout title="Contextual, not static">
-  <p>The embedding entering the first layer identifies a token and its position. The vector leaving the final layer represents that token after repeated interaction with the entire visible sequence. The same word can therefore receive different final vectors in different contexts.</p>
+<Callout title="Context vectors are not static">
+  <p>The embedding that goes into the first layer identifies a token and its position. The vector that comes out of the last layer represents the token after many interactions with the full visible sequence. Thus, one word can have different final vectors in different contexts.</p>
 </Callout>
 
 <h2 id="masking-lab">Masking lab</h2>
 
-Bidirectional context becomes intuitive when a word is removed. Left context constrains local grammar; right context constrains the same decision from the other direction. The final probability distribution reflects both.
+Remove a word from a sentence to see how bidirectional context works. The left context limits the local grammar. The right context limits the same decision from the other direction. The final probability distribution uses the two sides.
 
 <BertMaskingLab />
 
-The simulator uses illustrative probabilities, but its pipeline mirrors the real objective:
+The simulator uses example probabilities. But its steps are the same as the real objective:
 
 1. Select a prediction position.
-2. Corrupt the input according to the masking policy.
-3. Encode the complete modified sequence.
+2. Corrupt the input with the masking policy.
+3. Encode the full changed sequence.
 4. Project the selected hidden state over the vocabulary.
 5. Compare the distribution with the original token.
 
-The loss trains much more than a word lookup. To recover a hidden token consistently, the encoder must combine agreement, syntax, semantic compatibility, topic, and longer-range evidence.
+This loss teaches much more than a word lookup. To recover hidden tokens correctly, the encoder must use agreement, syntax, meaning, topic and evidence from far away in the text.
 
 <h2 id="scaling-efficiency">Scaling and efficiency</h2>
 
 ### More data and larger models
 
-RoBERTa demonstrated that BERT's architecture could improve through more data, more compute, and a stronger training recipe. It also found that removing NSP did not reduce downstream quality under that scaled setup. The lesson is methodological: before inventing a new architecture, determine whether the baseline objective is under-trained.
+RoBERTa showed that the BERT architecture can become better with more data, more compute and a stronger training recipe. It also showed that, in this larger setup, NSP removal did not decrease downstream quality. The lesson is about method: before you make a new architecture, find out if the baseline objective has enough training.
 
-Larger BERT-like encoders increase depth and width into the billion-parameter range, but scaling introduces unstable optimization, distributed-compute requirements, greater memory use, and slower inference.
+Larger BERT-like encoders increase depth and width to more than one billion parameters. But scaling also causes problems:
+
+- The optimization can become unstable.
+- Training needs distributed compute.
+- The model uses more memory.
+- Inference is slower.
 
 ### Making encoders smaller or faster
 
-The source groups efficiency work into several strategies:
+The source book puts efficiency methods into these groups:
 
-- **Knowledge distillation:** train a smaller student to match a larger teacher's outputs or hidden representations.
-- **Pruning:** remove layers, attention heads, or individual parameters that contribute little.
-- **Quantization:** store and compute parameters at lower numerical precision.
-- **Dynamic inference:** exit at an earlier layer or shorten the active token sequence for easier inputs.
-- **Parameter sharing:** reuse one layer's parameters at several depths.
+- **Knowledge distillation:** Train a smaller student model to match the outputs or hidden representations of a larger teacher model.
+- **Pruning:** Remove layers, attention heads or single parameters that have a small effect.
+- **Quantization:** Store parameters and calculate with them at lower numerical precision.
+- **Dynamic inference:** For easy inputs, stop at an earlier layer or make the active token sequence shorter.
+- **Parameter sharing:** Use the parameters of one layer again at more than one depth.
 
-These methods optimize different resources. Parameter sharing reduces storage but may not reduce the number of layer evaluations. Quantization reduces memory bandwidth and can accelerate supported hardware. Early exit reduces per-example compute but requires a reliable confidence rule. “Efficient” must therefore name the target: checkpoint size, peak memory, latency, throughput, or energy.
+Each method saves a different resource:
 
-| Method | Primary saving | Main trade-off |
+- Parameter sharing decreases storage. But the model can still do the same number of layer calculations.
+- Quantization decreases memory bandwidth. It can also make supported hardware faster.
+- Early exit decreases the compute for each example. But it needs a reliable confidence rule.
+
+Thus, when you say "efficient", name the target: checkpoint size, peak memory, latency, throughput or energy.
+
+| Method | Main saving | Main trade-off |
 | --- | --- | --- |
-| Distillation | Model size and inference cost | Student may lose teacher behavior |
-| Pruning | Parameters or executed operations | Sparse structures need hardware support |
-| Quantization | Storage and memory bandwidth | Lower precision can reduce accuracy |
-| Dynamic depth/length | Per-input computation | Control policy adds complexity |
-| Parameter sharing | Parameter memory | Repeated computation may remain |
+| Distillation | Model size and inference cost | The student can lose some teacher behavior |
+| Pruning | Parameters or operations | Sparse structures need hardware support |
+| Quantization | Storage and memory bandwidth | Lower precision can decrease accuracy |
+| Dynamic depth or length | Compute for each input | The control policy adds complexity |
+| Parameter sharing | Parameter memory | The model can still do the same calculations |
 
 <h2 id="multilingual-models">Multilingual models</h2>
 
-A monolingual approach trains one encoder per language. Multilingual BERT instead shares one model and a larger vocabulary across text from **104 languages**. Tokens from different languages are represented in a common parameter space, creating the possibility of cross-lingual transfer.
+A monolingual method trains one encoder for each language. Multilingual BERT uses a different method. It shares one model and a larger vocabulary across text from **104 languages**. Tokens from different languages share one parameter space. This makes cross-lingual transfer possible.
 
-For zero-shot cross-lingual classification:
+Do these steps for zero-shot cross-lingual classification:
 
 1. Pre-train one multilingual encoder.
 2. Fine-tune it on labeled examples in a source language.
-3. Apply the same model to the target language without target-language labels.
+3. Use the same model on the target language. You do not need labels in the target language.
 
-Transfer works when shared parameters learn features that remain useful across languages. It is not guaranteed: high-resource languages can dominate training, scripts compete for vocabulary capacity, tokenization lengths vary, and distant languages may share less structure.
+Transfer works when the shared parameters learn features that are useful in all the languages. But transfer is not certain:
 
-Cross-lingual language models can also incorporate aligned bilingual sentences. Packing both languages into one sequence and masking tokens lets evidence in one language help predict tokens in the other. Language embeddings can explicitly mark each token's language, although that assumption becomes awkward for code-switching, where language boundaries are fluid.
+- Languages with much data can control the training.
+- Different scripts compete for space in the vocabulary.
+- The number of tokens for the same text is different in each language.
+- Languages that are far apart can share less structure.
 
-> BERT's durable contribution is a complete reusable recipe: create a bidirectional prediction challenge, train a deep encoder at scale, then reshape its contextual outputs with a small task-specific interface.
+Cross-lingual language models can also use aligned bilingual sentences. You put the two languages into one sequence and mask some tokens. Then evidence in one language can help predict tokens in the other language. Language embeddings can show the language of each token. But this method is difficult for code-switching, where the boundaries between languages are not clear.
+
+> The lasting contribution of BERT is a full recipe that you can use again. Make a bidirectional prediction task, train a deep encoder at scale, and then change its context outputs with a small task-specific interface.
 
 <SourceNote pages="21–29" />

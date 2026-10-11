@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Inter, Literata } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
@@ -8,7 +9,8 @@ import { siteUrl } from "@/lib/content";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const literata = Literata({ subsets: ["latin"], variable: "--font-serif" });
-const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono" });
+// Only small uppercase labels use the mono font, so load one weight and do not preload it.
+const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: "400", variable: "--font-mono", preload: false });
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -27,7 +29,10 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, them
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${literata.variable} ${mono.variable}`}>
-      <body><ThemeProvider><SiteHeader />{children}<SiteFooter /></ThemeProvider></body>
+      <body>
+        <ThemeProvider><SiteHeader />{children}<SiteFooter /></ThemeProvider>
+        <Analytics />
+      </body>
     </html>
   );
 }

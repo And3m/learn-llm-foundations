@@ -1,35 +1,49 @@
-Training at scale coordinates four coupled resources: data, parameters, arithmetic, and communication. Increasing one while neglecting the others produces an expensive bottleneck rather than a better model.
+import { ParallelismDiagram } from "@/components/diagrams/generative-models"
+
+Training at scale must balance four resources that are connected: data, parameters, arithmetic and communication. If you increase one resource and do not increase the others, you get an expensive bottleneck, not a better model.
 
 <Callout title="Learning objectives">
-  <p>Explain the data pipeline, identify architecture changes common in large decoders, compare distributed-training strategies, and use scaling laws as forecasts rather than guarantees.</p>
+  <p>After this lesson, you can do these tasks:</p>
+  <ul>
+    <li>Explain the data pipeline.</li>
+    <li>Name the architecture changes that large decoders usually use.</li>
+    <li>Compare the distributed-training methods.</li>
+    <li>Use scaling laws as forecasts, not as guarantees.</li>
+  </ul>
 </Callout>
 
 <h2 id="data-preparation">Data preparation</h2>
 
-Raw web text is abundant but not automatically suitable for training. A practical pipeline typically performs:
+There is much raw web text. But raw text is not always good for training. A practical pipeline usually does these steps:
 
-1. **Extraction and normalization** to recover readable text and consistent encodings.
-2. **Language and quality filtering** to remove malformed or low-information documents.
-3. **Deduplication** at exact and near-duplicate levels.
-4. **Safety, privacy, and policy filtering** for content that should not enter training.
-5. **Mixture weighting** across domains, languages, code, books, papers, and conversational sources.
-6. **Tokenization and packing** into training sequences with minimal padding.
+1. **Extraction and normalization:** Recover readable text and use consistent encodings.
+2. **Language and quality filtering:** Remove documents that are damaged or that contain little information.
+3. **Deduplication:** Remove exact duplicates and near-duplicates.
+4. **Safety, privacy and policy filtering:** Remove content that must not go into training.
+5. **Mixture weighting:** Set the quantity of each source, for example domains, languages, code, books, papers and conversations.
+6. **Tokenization and packing:** Put the tokens into training sequences with as little padding as possible.
 
-Deduplication matters because repeated documents distort the effective distribution, waste compute, and increase memorization risk. Aggressive filtering can remove most scraped data, but the filter itself introduces preferences about language, style, and quality.
+Deduplication is necessary for three reasons:
 
-The corpus mixture is a model parameter in everything but name. Upweighting code, mathematics, or a low-resource language changes capabilities and trade-offs even if architecture and token budget remain fixed.
+- Repeated documents change the effective distribution.
+- They use compute for no benefit.
+- They increase the risk of memorization.
 
-<h2 id="model-modifications">Model modifications</h2>
+Strong filtering can remove most of the scraped data. But the filter itself adds preferences about language, style and quality.
 
-Large decoder architectures keep the Transformer core but adjust components for stability and efficiency.
+The corpus mix has the same effect as a model parameter. If you give more weight to code, mathematics or a language with little data, the skills and trade-offs of the model change. This occurs even when the architecture and the token budget stay the same.
 
-- **Pre-normalization** applies layer normalization before attention or the feed-forward network, improving gradient flow through deep residual stacks.
-- **RMS-style normalization** normalizes magnitude with less computation than full mean-and-variance normalization.
-- **Gated feed-forward networks** combine an activation gate with a value projection and often improve parameter use.
-- **Rotary or relative positions** encode token offsets in attention and support later context extension.
-- **Grouped or multi-query attention** reduces the number of key/value heads, lowering inference-cache memory.
+<h2 id="model-modifications">Model changes</h2>
 
-For a standard feed-forward layer,
+Large decoder architectures keep the Transformer core. But they change some components for stability and efficiency:
+
+- **Pre-normalization** applies layer normalization before attention or the feed-forward network. This makes the gradient flow better through deep residual stacks.
+- **RMS-style normalization** normalizes the magnitude. It uses less compute than full mean-and-variance normalization.
+- **Gated feed-forward networks** combine an activation gate with a value projection. They often use parameters better.
+- **Rotary or relative positions** encode the distance between tokens in attention. They also help later context extension.
+- **Grouped-query or multi-query attention** decreases the number of key and value heads. This decreases the memory of the inference cache.
+
+This is a standard feed-forward layer:
 
 $$
 \operatorname{FFN}(h)
@@ -37,22 +51,26 @@ $$
 \sigma(hW_1+b_1)W_2+b_2
 $$
 
-the hidden dimension is usually several times larger than model width. This sublayer therefore contains a large fraction of parameters and compute. Gating can improve expressiveness, but larger hidden dimensions increase both training and serving cost.
+The layer projects $h$ to a larger hidden size, applies the activation $\sigma$, and then projects back.
 
-Architecture changes must be evaluated as a system. A modification that stabilizes training may affect kernel efficiency; a cache-saving attention design changes inference economics even if pre-training cost is similar.
+The hidden dimension is usually some times larger than the model width. Thus, this sublayer contains a large part of the parameters and the compute. Gating can make the layer more expressive. But larger hidden dimensions increase the training cost and the serving cost.
+
+Evaluate architecture changes as a system. A change that makes training more stable can have an effect on kernel efficiency. An attention design that saves cache memory changes the cost of inference, even if the pre-training cost is almost the same.
 
 <h2 id="distributed-training">Distributed training</h2>
 
-No single accelerator can hold the largest model, optimizer state, activations, and batch. Distributed training divides them along several axes.
+One accelerator cannot hold the largest model, its optimizer state, its activations and the batch. Distributed training divides these items along some axes.
 
-| Strategy | What is divided | Main communication |
+| Strategy | What it divides | Main communication |
 | --- | --- | --- |
 | Data parallelism | Minibatch examples | Gradient synchronization |
-| Tensor parallelism | Matrix operations within layers | Partial activations/results |
-| Pipeline parallelism | Consecutive layer groups | Activations between stages |
-| State sharding | Parameters, gradients, optimizer state | Gather/reduce as needed |
+| Tensor parallelism | Matrix operations inside layers | Partial activations or results |
+| Pipeline parallelism | Groups of layers in sequence | Activations between stages |
+| State sharding | Parameters, gradients and optimizer state | Gather or reduce when necessary |
 
-In data parallelism, worker $k$ computes a gradient on shard $D_k$ and workers aggregate:
+<ParallelismDiagram />
+
+In data parallelism, worker $k$ calculates a gradient on its data shard $D_k$. Then the workers combine their gradients:
 
 $$
 g
@@ -61,15 +79,27 @@ g
 \nabla_\theta\mathcal{L}_\theta(D_k)
 $$
 
-Tensor parallelism fits wide layers across devices. Pipeline parallelism fits deep stacks but creates bubbles when stages wait. State sharding reduces redundant memory. Large systems combine all three, making topology and collective communication as important as nominal device count.
+The final gradient $g$ is the average of the gradients from all $N$ workers.
 
-Low-precision training reduces memory traffic and accelerates matrix multiplication. Master weights, loss scaling, or carefully chosen formats preserve enough dynamic range for stable updates. Checkpointing activations trades extra recomputation for lower memory.
+Each strategy solves a different problem:
 
-The useful metric is not peak hardware throughput; it is sustained training progress per unit time and cost. Data loading, synchronization, stragglers, failures, and checkpoint writes all reduce utilization.
+- Tensor parallelism puts wide layers across devices.
+- Pipeline parallelism puts deep stacks across devices. But it makes "bubbles" when stages wait.
+- State sharding decreases memory that is repeated on each device.
+
+Large systems use all three. Thus, the network topology and the collective communication are as important as the number of devices.
+
+Low-precision training decreases memory traffic and makes matrix multiplication faster. Master weights, loss scaling or carefully selected formats keep enough dynamic range for stable updates. Activation checkpointing does more calculation again, but it uses less memory.
+
+The useful metric is not the peak hardware throughput. It is the continuous training progress for each unit of time and cost. These items all decrease utilization: data loading, synchronization, slow workers, failures and checkpoint writes.
 
 <h2 id="scaling-laws">Scaling laws</h2>
 
-Empirical scaling laws approximate validation loss as a power law of model parameters $N$, dataset size $D$, or compute $C$:
+Empirical scaling laws give an approximate validation loss as a power law. The law uses one of three resources:
+
+- The model parameters $N$.
+- The dataset size $D$.
+- The compute $C$.
 
 $$
 \mathcal{L}(N)\approx aN^{-\alpha}+b,
@@ -77,17 +107,36 @@ $$
 \mathcal{L}(D)\approx cD^{-\beta}+d
 $$
 
-Power laws are valuable because small runs can forecast larger ones within an observed regime. They also reveal bottlenecks: adding parameters yields diminishing benefit if the model sees too few tokens, while feeding enormous data to insufficient capacity eventually saturates.
+The loss decreases as a power of $N$ or $D$, and it moves toward a floor ($b$ or $d$) that it cannot go below.
 
-**Compute-optimal training** chooses $N$ and $D$ together for a fixed compute budget. Deployment can change the optimum. If inference happens billions of times, a smaller model trained on more tokens may cost more to train but far less to serve.
+Power laws are useful because small runs can forecast larger runs inside the observed range. They also show bottlenecks:
 
-Scaling-law limitations are equally important:
+- More parameters give a smaller benefit each time if the model sees too few tokens.
+- Very large data with too little capacity stops giving benefit after some time.
 
-- coefficients depend on architecture, data, tokenizer, and metric;
-- downstream task trends can differ from pre-training loss;
-- a smooth average does not predict a specific emergent capability;
-- distribution shifts and data quality can break extrapolation.
+<MermaidDiagram
+  title="What a scaling law connects"
+  caption="For a fixed compute budget, select the model size and the token count together. The expected serving volume can move the best choice toward a smaller model with more tokens."
+  chart={`
+flowchart TB
+  C[Compute budget C] --> N[Parameters N]
+  C --> D[Training tokens D]
+  N --> L[Validation loss]
+  D --> L
+  S[Expected inference volume] -.-> N
+  L --> V{Validate on real tasks}
+`}
+/>
 
-Use scaling laws to allocate experiments and budgets, then validate the resulting model on the actual capability and risk suite.
+**Compute-optimal training** selects $N$ and $D$ together for a fixed compute budget. Deployment can change the best choice. If the model serves billions of requests, a smaller model with more training tokens can be better. Its training costs more, but its serving costs much less.
+
+Scaling laws also have limits:
+
+- The coefficients depend on the architecture, the data, the tokenizer and the metric.
+- Trends on downstream tasks can be different from the pre-training loss.
+- A smooth average does not predict one specific new skill.
+- Distribution shifts and data quality can make the extrapolation wrong.
+
+Use scaling laws to plan experiments and budgets. Then validate the model on the real set of skills and risks.
 
 <SourceNote pages="56–65" />

@@ -1,36 +1,81 @@
-Reinforcement learning from human feedback (RLHF) turns comparisons between model responses into a learned reward, then updates the language model to receive more of that reward while remaining close to a capable reference policy.
+import { RewardModelDiagram } from "@/components/diagrams/alignment"
+
+Reinforcement learning from human feedback (RLHF) has two main parts:
+
+1. It changes comparisons between model responses into a learned reward.
+2. It updates the language model to get more of this reward. The model must also stay near a capable reference policy.
 
 <h2 id="reinforcement-learning">Reinforcement learning basics</h2>
 
-An RL problem contains states, actions, rewards, and a policy. For language generation, the prompt and generated prefix form the state, the next token is an action, and the language model is the policy $\pi_\theta$. A scalar reward is usually assigned after the response is complete.
+A reinforcement learning (RL) problem contains states, actions, rewards and a policy. For language generation:
 
-Policy optimization increases the probability of sampled actions associated with high return. Unlike SFT, it does not require a target token for every position. It can therefore optimize sequence-level qualities, but its estimates are noisy and its policy changes can be unstable.
+- The **state** is the prompt and the generated prefix.
+- An **action** is the next token.
+- The **policy** $\pi_\theta$ is the language model.
+- The **reward** is usually one number that the model gets after the response is complete.
 
-In RLHF, the environment is largely the prompt distribution and learned scorer. The scorer is only a proxy for human judgment, so reward improvement must be checked against independent evaluation.
+Policy optimization increases the probability of sampled actions that get a high return. SFT needs a target token at each position, but RL does not. Thus, RL can optimize qualities of the full sequence. But its estimates have much noise, and its policy changes can be unstable.
 
-<h2 id="reward-model">Reward model</h2>
+In RLHF, the environment is mostly the prompt distribution and the learned scorer. The scorer is only a proxy for human judgment. Thus, you must compare the reward improvement with an independent evaluation.
 
-Annotators compare candidate responses for the same prompt, producing a chosen response $y^+$ and rejected response $y^-$. Pairwise judgments are often easier than assigning reliable absolute scores. A reward model $r_\phi(x,y)$ is trained to score the chosen response higher, commonly with
+<h2 id="reward-model">Training reward models</h2>
+
+Annotators compare candidate responses for the same prompt. They select a chosen response $y^+$ and a rejected response $y^-$. A comparison of two responses is often easier than a reliable absolute score. A reward model $r_\phi(x,y)$ learns to give the chosen response a higher score. Usually, it uses this loss:
 
 $$
 \mathcal{L}_{RM} = -\log \sigma\left(r_\phi(x,y^+) - r_\phi(x,y^-)\right).
 $$
 
-Collection guidelines must define whether preference combines correctness, helpfulness, safety, style, or separate dimensions. Candidate generation should expose meaningful differences, and disagreement should be measured rather than silently converted into certainty.
+The loss is small when the reward of the chosen response is much higher than the reward of the rejected response.
 
-The reward model learns patterns in limited comparisons. It may mistake length, confidence, or familiar phrasing for quality. Held-out human judgments, calibration checks, and adversarial candidates help expose these shortcuts.
+<RewardModelDiagram />
+
+The collection guidelines must define what "preference" means. It can combine correctness, helpfulness, safety and style, or it can keep them as separate dimensions. The candidate generation must show differences that are useful. Measure the disagreement between annotators. Do not hide it and show it as certainty.
+
+The reward model learns patterns from a limited number of comparisons. It can think that length, confidence or familiar wording is quality. Held-out human judgments, calibration checks and hostile candidates help find these shortcuts.
 
 <h2 id="policy-optimization">Training the language model</h2>
 
-The policy generates responses, the reward model scores them, and an RL algorithm updates the policy. A typical objective combines predicted reward with a penalty for divergence from a reference model:
+The training loop has three steps:
+
+1. The policy generates responses.
+2. The reward model gives them scores.
+3. An RL algorithm updates the policy.
+
+<MermaidDiagram
+  title="One RLHF training iteration"
+  caption="The reward model scores each response. The KL penalty compares the policy with the frozen reference model, so the policy cannot move too far to get a high score."
+  chart={`
+sequenceDiagram
+  participant D as Prompt dataset
+  participant P as Policy π_θ
+  participant RM as Reward model r_φ
+  participant Ref as Reference π_ref (frozen)
+  participant O as RL optimizer (for example PPO)
+  D->>P: Sample prompt x
+  P->>P: Generate response y
+  P->>RM: (x, y)
+  RM-->>O: Reward r_φ(x, y)
+  P->>Ref: Token probabilities of y
+  Ref-->>O: KL penalty β·KL(π_θ ‖ π_ref)
+  O->>O: Estimate advantage
+  O->>P: Update θ
+`}
+/>
+
+A usual objective combines the predicted reward with a penalty for distance from a reference model:
 
 $$
 \max_\theta\; \mathbb{E}_{y\sim\pi_\theta}[r_\phi(x,y)]
 - \beta D_{KL}(\pi_\theta \| \pi_{ref}).
 $$
 
-The KL term limits drift so that optimization does not discard fluency, diversity, or broad capabilities in pursuit of the learned score. The coefficient $\beta$ controls the strength of that anchor.
+The policy tries to get a high average reward. The second term subtracts a penalty when the policy becomes too different from the reference model.
 
-RLHF is operationally demanding: it interleaves generation, scoring, advantage estimation, policy updates, and stability controls. Over-optimization can exploit weaknesses in the reward model, so teams track both reward and independent human or task-specific metrics throughout training.
+The KL term limits the policy movement. Thus, the optimization does not lose fluency, diversity or general skills when it tries to get a higher learned score. The coefficient $\beta$ controls how strong this limit is.
+
+RLHF is difficult to operate. It mixes generation, scoring, advantage estimation, policy updates and stability controls.
+
+> **Caution:** Too much optimization can exploit weaknesses in the reward model. Thus, during all of the training, monitor the reward and also independent human or task-specific metrics.
 
 <SourceNote pages="172-186" />

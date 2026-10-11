@@ -6,7 +6,7 @@ import { SimulatorFrame } from "./simulator-frame";
 const modes = {
   decoder: { label: "Decoder-only", caption: "Predict the next token", input: ["A", "model", "learns", "from"], target: "text", visible: [true, true, true, true], relation: "Causal: each position sees only its left context." },
   encoder: { label: "Encoder-only", caption: "Recover masked tokens", input: ["A", "model", "[MASK]", "from", "text"], target: "learns", visible: [true, true, false, true, true], relation: "Bidirectional: the masked position uses context on both sides." },
-  seq2seq: { label: "Encoder-decoder", caption: "Reconstruct transformed text", input: ["A", "model", "[GAP]", "text"], target: "learns from", visible: [true, true, false, true], relation: "The encoder reads the corrupted input; the decoder generates the repair." },
+  seq2seq: { label: "Encoder-decoder", caption: "Rebuild the changed text", input: ["A", "model", "[GAP]", "text"], target: "learns from", visible: [true, true, false, true], relation: "The encoder reads the corrupted input. The decoder generates the missing text." },
 } as const;
 
 type Mode = keyof typeof modes;
@@ -15,7 +15,7 @@ export function ObjectiveExplorer() {
   const [mode, setMode] = useState<Mode>("encoder");
   const item = modes[mode];
   return (
-    <SimulatorFrame number="02" title="One corpus, three learning objectives" description="The architecture and corruption rule decide which relationships the model can learn.">
+    <SimulatorFrame number="02" title="One corpus, three learning objectives" description="The architecture and the corruption rule decide which relations the model can learn.">
       <div className="segmented" role="tablist" aria-label="Pre-training objective">
         {(Object.keys(modes) as Mode[]).map((key) => <button key={key} role="tab" aria-selected={mode === key} onClick={() => setMode(key)}>{modes[key].label}</button>)}
       </div>

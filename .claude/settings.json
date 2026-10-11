@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run check)",
+      "Bash(npm run lint)",
+      "Bash(npm run typecheck)",
+      "Bash(npm test)",
+      "Bash(npx vitest run *)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx eslint *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git -c safe.directory=* status *)",
+      "Bash(git -c safe.directory=* diff *)",
+      "Bash(git -c safe.directory=* log *)",
+      "Bash(git -c safe.directory=* show *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-lessons.mjs\"",
+            "timeout": 180,
+            "statusMessage": "Checking STE style and Mermaid diagrams..."
+          }
+        ]
+      }
+    ]
+  }
+}

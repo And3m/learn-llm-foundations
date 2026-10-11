@@ -1,14 +1,24 @@
 import { AdaptationExplorer } from "@/components/simulators/adaptation-explorer"
+import { FineTuneLayersDiagram } from "@/components/diagrams/pre-training"
 
-A pre-trained BERT encoder returns contextual vectors, not the final output for every NLP problem. Applying it means choosing an input format, attaching a prediction network whose output matches the task, and deciding which parameters should move during supervised adaptation.
+A pre-trained BERT encoder gives context vectors. It does not give the final output for each NLP problem. To apply BERT, you make three decisions:
+
+1. Select an input format.
+2. Add a prediction network with an output that matches the task.
+3. Decide which parameters change during supervised adaptation.
 
 <Callout title="Learning objectives">
-  <p>By the end of this lesson, you should be able to define BERT's downstream optimization problem, choose the correct hidden states and task head for five output shapes, and reason about freezing, fine-tuning, overfitting, and catastrophic forgetting.</p>
+  <p>After this lesson, you can do these tasks:</p>
+  <ul>
+    <li>Define the downstream optimization problem for BERT.</li>
+    <li>Select the correct hidden states and task head for five output shapes.</li>
+    <li>Explain freezing, fine-tuning, overfitting and catastrophic forgetting.</li>
+  </ul>
 </Callout>
 
 <h2 id="adaptation-objective">The adaptation objective</h2>
 
-Let $\operatorname{BERT}_{\hat{\theta}}(x)$ be a pre-trained encoder and $\operatorname{Predict}_\omega$ a task head:
+$\operatorname{BERT}_{\hat{\theta}}(x)$ is a pre-trained encoder. $\operatorname{Predict}_\omega$ is a task head:
 
 $$
 y
@@ -19,9 +29,17 @@ y
 \right)
 $$
 
-$x$ is formatted for the task, and $y$ must match its output space: a label distribution, real-valued score, token-label sequence, answer span, or encoded source for a decoder.
+The task head changes the BERT output for the input $x$ into the task output $y$.
 
-Given labeled examples $D$, adaptation minimizes the downstream loss:
+You format $x$ for the task. The output $y$ must match the output space of the task. It can be one of these:
+
+- A label distribution.
+- A real-valued score.
+- A sequence of token labels.
+- An answer span.
+- An encoded source for a decoder.
+
+With labeled examples $D$, adaptation minimizes the downstream loss:
 
 $$
 (\tilde{\omega},\tilde{\theta})
@@ -35,29 +53,39 @@ y_{\mathrm{gold}}
 \right)
 $$
 
-The $+$ notation emphasizes initialization: optimization begins from pre-trained $\hat{\theta}$ rather than a random encoder. The result $\tilde{\theta}$ is task-adapted.
+Adaptation finds the head and encoder parameters that give the smallest total loss on the labeled examples.
 
-### How much should move?
+The $+$ symbol shows the initialization. The optimization starts from the pre-trained $\hat{\theta}$, not from a random encoder. The result $\tilde{\theta}$ is adapted to the task.
 
-- **Frozen feature extraction:** keep $\hat{\theta}$ fixed and optimize $\omega$.
-- **Partial fine-tuning:** update the task head and selected upper encoder layers.
-- **Full fine-tuning:** update the entire encoder and task head, normally with careful learning rates and validation.
+### How many parameters must change?
+
+- **Frozen feature extraction:** Keep $\hat{\theta}$ fixed and optimize only $\omega$.
+- **Partial fine-tuning:** Update the task head and some selected upper encoder layers.
+- **Full fine-tuning:** Update the full encoder and the task head. Usually, this needs careful learning rates and validation.
+
+<FineTuneLayersDiagram />
 
 <AdaptationExplorer />
 
-Freezing is inexpensive and protects general representations, but the task can only use information already exposed by BERT. Full fine-tuning is more expressive, but it uses optimizer state and gradient memory for the whole model and can overfit a small dataset. Partial tuning is a continuum rather than one standardized method.
+Each choice has a cost and a benefit:
+
+- Freezing costs little and keeps the general representations safe. But the task can use only the information that BERT already shows.
+- Full fine-tuning can fit more tasks. But it needs optimizer state and gradient memory for the full model. It can also overfit a small dataset.
+- Partial tuning is a range of choices between these two. It is not one standard method.
 
 <h2 id="classification-regression">Classification and regression</h2>
 
-### Single-text classification
+### Classification of one text
 
-For sentiment, grammaticality, topic, or intent, format the input as
+Use this input format for sentiment, grammar, topic or intent tasks:
 
 $$
 [\mathrm{CLS}]\ x_1\ldots x_m\ [\mathrm{SEP}]
 $$
 
-The final $h_{\mathrm{CLS}}$ vector represents the complete sequence. A linear layer and softmax produce a label distribution:
+The input is the text between the $[\mathrm{CLS}]$ and $[\mathrm{SEP}]$ tokens.
+
+The final $h_{\mathrm{CLS}}$ vector represents the full sequence. A linear layer and a softmax give a label distribution:
 
 $$
 \Pr(c\mid x)
@@ -65,38 +93,59 @@ $$
 \operatorname{Softmax}(W h_{\mathrm{CLS}}+b)
 $$
 
-Cross-entropy then increases the probability of the correct label. Although the prediction head may be small, gradients can flow through it into every BERT layer during full fine-tuning.
+This is the probability of each label $c$, calculated from the $h_{\mathrm{CLS}}$ vector.
 
-### Text-pair classification
+Then the cross-entropy loss increases the probability of the correct label. The prediction head can be small. But during full fine-tuning, gradients go through the head into each BERT layer.
 
-For entailment, paraphrase detection, answer selection, or grounded commonsense inference, pack both texts together:
+### Classification of a text pair
+
+Put the two texts together for these tasks: entailment, paraphrase detection, answer selection and grounded commonsense inference.
 
 $$
 [\mathrm{CLS}]\ x_1\ldots x_m\ [\mathrm{SEP}]\
 y_1\ldots y_n\ [\mathrm{SEP}]
 $$
 
-Segment embeddings distinguish the two inputs, while self-attention lets their tokens interact before $h_{\mathrm{CLS}}$ is classified. This **cross-encoder** design performs joint reasoning over the pair, but it must run BERT again for every pair being scored.
+The two texts are in one input, and a $[\mathrm{SEP}]$ token follows each text.
+
+Segment embeddings show which tokens are in each text. Self-attention lets the tokens of the two texts interact before the model classifies $h_{\mathrm{CLS}}$. This **cross-encoder** design examines the two texts together. But it must run BERT again for each pair that it scores.
 
 ### Regression
 
-The architecture can remain the same while the output layer changes. A scalar head predicts similarity, quality, or another continuous score:
+The architecture can stay the same while the output layer changes. A scalar head predicts similarity, quality or a different continuous score:
 
 $$
 \hat{s}=f_\omega(h_{\mathrm{CLS}})
 $$
 
-Training minimizes a regression loss such as squared error. The essential design rule is that the prediction network and loss must match the task's output type.
+The head $f_\omega$ changes $h_{\mathrm{CLS}}$ into one number $\hat{s}$.
 
-| Task | BERT output consumed | Head output |
+Training minimizes a regression loss, for example the squared error. The main design rule is this: the prediction network and the loss must match the output type of the task.
+
+| Task | BERT output that the head uses | Head output |
 | --- | --- | --- |
-| Single-text classification | $h_{\mathrm{CLS}}$ | Label distribution |
-| Pair classification | Joint $h_{\mathrm{CLS}}$ | Relation label |
+| Classification of one text | $h_{\mathrm{CLS}}$ | Label distribution |
+| Classification of a pair | Joint $h_{\mathrm{CLS}}$ | Relation label |
 | Regression | $h_{\mathrm{CLS}}$ | Scalar score |
+
+<MermaidDiagram
+  title="Which BERT output each task head reads"
+  caption="Sentence-level tasks read the CLS vector. Token-level tasks read the vector of each token. Span tasks score each passage token as a start or an end."
+  chart={`
+flowchart LR
+  B["BERT encoder"] --> CLS["h_CLS"]
+  B --> TOK["h_1 ... h_m"]
+  CLS --> C1["Softmax head → label"]
+  CLS --> C2["Scalar head → score"]
+  TOK --> C3["Softmax per token → tag (NER, POS)"]
+  TOK --> C4["Start and end heads → answer span"]
+  TOK --> C5["Decoder memory → generated text"]
+`}
+/>
 
 <h2 id="sequence-labeling">Sequence labeling</h2>
 
-Some tasks need one label per input token. Named entity recognition (NER) and part-of-speech tagging therefore consume contextual vectors $h_1,\ldots,h_m$ rather than only $h_{\mathrm{CLS}}$.
+Some tasks need one label for each input token. Examples are named entity recognition (NER) and part-of-speech tagging. These tasks use the context vectors $h_1,\ldots,h_m$, not only $h_{\mathrm{CLS}}$.
 
 For each position:
 
@@ -106,7 +155,9 @@ p_i
 \operatorname{Softmax}(W h_i+b)
 $$
 
-If $t_i$ is the correct tag at position $i$, a simple token-level loss is
+$p_i$ is the probability distribution over the tags at position $i$.
+
+$t_i$ is the correct tag at position $i$. A simple token-level loss is:
 
 $$
 \mathcal{L}_{\mathrm{tag}}
@@ -115,28 +166,38 @@ $$
 \sum_{i=1}^{m}\log p_i(t_i)
 $$
 
-An NER system might use BIO labels:
+This loss is the average negative log probability of the correct tag across all $m$ positions.
 
-- **B-ORG:** beginning of an organization name.
-- **I-ORG:** token inside that organization name.
-- **O:** token outside any named entity.
+An NER system can use BIO labels:
+
+- **B-ORG:** The first token of an organization name.
+- **I-ORG:** A token inside the organization name.
+- **O:** A token that is not in a named entity.
 
 ### Subword alignment
 
-BERT operates on WordPiece tokens, while annotated datasets often label words. If “tokenization” becomes “token” + “##ization,” the implementation needs an alignment policy: repeat the word's tag, label only the first subword and ignore the rest in the loss, or aggregate subword states before classification. This choice affects both training and evaluation.
+BERT uses WordPiece tokens. But annotated datasets often label full words. For example, "tokenization" can become "token" + "##ization". Thus, the implementation needs an alignment policy. Select one of these:
 
-Independent token softmax layers can produce locally inconsistent sequences. A structured decoder such as a conditional random field can score transitions between tags and search for the best valid path, at the cost of an additional modeling layer.
+- Copy the tag of the word to each subword.
+- Label only the first subword, and do not use the other subwords in the loss.
+- Combine the subword states before classification.
+
+This choice has an effect on training and on evaluation.
+
+Independent token softmax layers can make sequences that are not consistent. A structured decoder, for example a conditional random field, can solve this problem. It scores the transitions between tags and finds the best valid path. The cost is one more modeling layer.
 
 <h2 id="span-prediction">Span prediction</h2>
 
-Extractive reading comprehension asks the model to identify a contiguous answer inside a context. Pack the query and passage together:
+Extractive reading comprehension asks the model to find a continuous answer inside a context. Put the query and the passage together:
 
 $$
 [\mathrm{CLS}]\ \mathrm{query}\ [\mathrm{SEP}]\
 \mathrm{context}\ [\mathrm{SEP}]
 $$
 
-Two prediction heads score each context position as a possible beginning or ending:
+The query is the first segment, and the passage is the second segment.
+
+Two prediction heads score each context position as a possible start or end:
 
 $$
 p_j^{\mathrm{beg}}
@@ -148,7 +209,9 @@ p_j^{\mathrm{end}}
 \Pr(j\text{ ends the answer})
 $$
 
-Training maximizes the gold start and end positions. At inference, search valid spans:
+Each position $j$ gets a start probability and an end probability.
+
+Training maximizes the probability of the correct start and end positions. At inference, search the valid spans:
 
 $$
 (\hat{j}_1,\hat{j}_2)
@@ -161,31 +224,51 @@ $$
 \right)
 $$
 
-The constraint $j_1\leq j_2$ prevents reversed spans. Practical systems may also limit maximum answer length and include a special no-answer score.
+The model selects the start and end pair with the highest total log probability.
 
-### Worked example
+The limit $j_1\leq j_2$ stops reversed spans. Practical systems can also set a maximum answer length and add a special "no answer" score.
 
-For the passage “BERT uses bidirectional self-attention” and the question “What attention pattern does BERT use?”, a trained model should place high start probability on “bidirectional” and high end probability on “self-attention.” It does not generate those words; it selects their positions in the provided passage.
+### Example: span prediction
+
+The passage is "BERT uses bidirectional self-attention". The question is "What attention pattern does BERT use?". A trained model must give a high start probability to "bidirectional" and a high end probability to "self-attention". The model does not generate these words. It selects their positions in the passage.
 
 <h2 id="generative-encoders">Generation and fine-tuning risks</h2>
 
-BERT can serve as the encoder in an encoder-decoder system for translation, summarization, or dialogue. Its contextual states become source memory for a separate autoregressive decoder. An optional adapter can map dimensions or representation conventions between the two modules.
+BERT can be the encoder in an encoder-decoder system for translation, summarization or dialogue. Its context states become the source memory for a separate decoder that generates one token at a time. An optional adapter can map dimensions or representation formats between the two modules.
 
-This setup creates an optimization asymmetry: the encoder begins pre-trained while the decoder or adapter may begin randomly initialized. Learning rates, warmup, freezing schedules, and data size determine whether the pre-trained representation is preserved or disrupted.
+This setup makes the optimization unequal. The encoder starts pre-trained, but the decoder or the adapter can start with random parameters. These settings decide if the pre-trained representation stays good or becomes damaged:
+
+- Learning rates.
+- Warmup.
+- Freezing schedules.
+- Data size.
 
 ### Overfitting and catastrophic forgetting
 
-Fine-tuning can improve the target task while reducing performance elsewhere. Two related failure modes are:
+Fine-tuning can make the target task better and make other tasks worse. There are two related failure modes:
 
-- **Overfitting:** the model memorizes patterns specific to a small tuning dataset and generalizes poorly.
-- **Catastrophic forgetting:** updates for the new task overwrite parameters that supported previously learned behavior.
+- **Overfitting:** The model memorizes patterns that occur only in a small tuning dataset. It does not generalize well.
+- **Catastrophic forgetting:** Updates for the new task replace parameters that supported behavior that the model learned before.
 
-Useful safeguards include representative validation data, early stopping, smaller encoder learning rates, partial freezing, mixing diverse or older examples into training, and methods specifically designed to preserve important parameters.
+These safeguards can help:
+
+- Validation data that represents the real use.
+- Early stopping.
+- Smaller learning rates for the encoder.
+- Partial freezing.
+- Diverse or older examples mixed into the training data.
+- Methods that keep the parameters that are necessary for earlier behavior.
 
 <Callout title="A practical decision sequence">
-  <p>First define the output shape and evaluation metric. Then attach the smallest head that can express it. Begin with the lightest update strategy, measure the error pattern, and unfreeze more capacity only when the evidence supports it.</p>
+  <ol>
+    <li>Define the output shape and the evaluation metric.</li>
+    <li>Add the smallest head that can give this output.</li>
+    <li>Start with the lightest update strategy.</li>
+    <li>Measure the error pattern.</li>
+    <li>Unfreeze more layers only when the evidence shows that it is necessary.</li>
+  </ol>
 </Callout>
 
-The checkpoint, tokenizer, special-token format, preprocessing, head, and label mapping form one system. A mismatch in any one of them can invalidate an otherwise correct fine-tuning run.
+The checkpoint, tokenizer, special-token format, preprocessing, head and label mapping are one system. If one of these parts does not match, a fine-tuning run that is otherwise correct can fail.
 
 <SourceNote pages="30–34" />

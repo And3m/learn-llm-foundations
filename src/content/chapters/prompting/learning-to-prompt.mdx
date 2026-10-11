@@ -1,33 +1,84 @@
-Prompt construction can be treated as an optimization problem. Instead of choosing one instruction by intuition, define what may change, how candidates will be evaluated, and how the search avoids overfitting to a small development set.
+import { SoftPromptDiagram } from "@/components/diagrams/prompting"
+
+You can use optimization to build a prompt. Do not select one instruction because it feels correct. Define these three items:
+
+- What can change.
+- How you will evaluate the candidates.
+- How the search will not overfit a small development set.
 
 <h2 id="prompt-optimization">Prompt optimization</h2>
 
-For a candidate prompt $p$, a simple objective is
+For a candidate prompt $p$, this is a simple objective:
 
 $$
 p^* = \arg\max_{p \in \mathcal{P}} J(p; D_{dev}),
 $$
 
-where $\mathcal{P}$ is the search space and $J$ measures performance on development examples. Candidates may differ in instruction wording, demonstration choice and order, output constraints, or decomposition strategy. Search can use manual iteration, model-proposed variants, evolutionary methods, or feedback from previous errors.
+The best prompt $p^*$ is the candidate that gets the highest score $J$ on the development examples.
 
-The objective determines what the search discovers. Exact-match accuracy can ignore useful partial answers; a model judge can reward verbosity or style; a tiny development set can be memorized. Keep a final test set isolated, inspect winning prompts, and measure cost, latency, and robustness alongside task quality.
+- $\mathcal{P}$ is the search space.
+- $J$ measures the performance on the development examples $D_{dev}$.
 
-Optimization also creates maintenance work. A prompt fitted to one model version, retrieval system, or user distribution may not remain best after the surrounding system changes.
+Candidates can be different in instruction wording, demonstration selection and order, output limits or decomposition strategy. The search can use one of these methods:
+
+- Manual iteration.
+- Variants that a model proposes.
+- Evolutionary methods.
+- Feedback from previous errors.
+
+<MermaidDiagram
+  title="An automatic prompt-optimization loop"
+  caption="The loop proposes prompts, scores them on development data and keeps the best ones. A separate test set gives the final, honest score."
+  chart={`
+flowchart TB
+  S[Seed prompts] --> G[Generate variants]
+  G --> E[Score on development set]
+  E --> K{Improvement?}
+  K -->|Yes| B[Keep best candidates]
+  B --> G
+  K -->|No, or budget used| T[Evaluate once on held-out test set]
+  T --> D[Deploy and monitor]
+`}
+/>
+
+The objective decides what the search finds:
+
+- Exact-match accuracy can ignore useful partial answers.
+- A model judge can reward long answers or a style.
+- The search can memorize a very small development set.
+
+Thus, keep a separate final test set. Examine the prompts that win. Measure the cost, the latency and the robustness together with the task quality.
+
+Optimization also makes maintenance work. A prompt that fits one model version, retrieval system or user distribution can stop being the best when the system around it changes.
 
 <h2 id="soft-prompts">Soft prompts</h2>
 
-A soft prompt is a trainable sequence of continuous embedding vectors placed before the ordinary input. Gradient descent updates those vectors while the base language model can remain frozen. Prefix tuning applies related learned vectors within multiple Transformer layers; adapters and low-rank updates are broader parameter-efficient fine-tuning methods.
+A soft prompt is a trainable sequence of continuous embedding vectors. It goes before the ordinary input. Gradient descent updates these vectors, and the base language model can stay frozen.
 
-If $E_p \in \mathbb{R}^{m \times d}$ is a learned prompt of $m$ vectors and $E_x$ contains the token embeddings, the model receives a sequence such as $[E_p; E_x]$. Only a small parameter set may need to be stored for each task.
+- **Prefix fine-tuning** adds trainable vectors at the start of the input of each Transformer layer.
+- **Adapters** and **low-rank updates** are wider parameter-efficient fine-tuning methods.
 
-Soft prompts can specialize a large model efficiently and avoid changing all weights. The tradeoff is interpretability and portability: the vectors are not readable instructions and usually depend on a particular model and embedding space. They also require training access and an objective, unlike text prompts that can be edited at request time.
+$E_p \in \mathbb{R}^{m \times d}$ is a learned prompt of $m$ vectors. $E_x$ contains the token embeddings. The model gets a sequence such as $[E_p; E_x]$. This means that the learned vectors come first, and then the embeddings of the real input. You can store only a small set of parameters for each task.
 
-<h2 id="prompt-compression">Prompt compression</h2>
+<SoftPromptDiagram />
 
-Long prompts increase input-token cost, prefilling latency, and key-value cache memory. Compression attempts to preserve the task-relevant information while reducing length. Methods include selecting the most relevant retrieved passages, removing redundant demonstrations, summarizing repeated context, or learning shorter representations.
+Soft prompts can specialize a large model efficiently, and they do not change all the weights. But they have disadvantages:
 
-Token count is not the objective by itself. A compact prompt that drops the decisive exception or attribution is operationally worse than a longer grounded prompt. Evaluate compression end to end on answer quality, evidence retention, latency, and cost. When source wording matters, selective extraction may be safer than abstractive summarization.
+- The vectors are not instructions that a person can read.
+- They usually work with only one model and its embedding space.
+- They need training access and an objective. You can edit a text prompt at request time, but you cannot do this with a soft prompt.
 
-Prompt learning shifts effort from hand-editing sentences to designing data, objectives, and evaluation loops. That makes the quality of the evaluation system the central constraint.
+<h2 id="prompt-compression">Shorter prompts</h2>
+
+Long prompts increase three costs: the input-token cost, the prefilling latency and the key-value cache memory. Compression tries to keep the information that the task needs and to make the prompt shorter. There are different methods:
+
+- Select the most related retrieved passages.
+- Remove repeated demonstrations.
+- Summarize repeated context.
+- Learn shorter representations.
+
+The token count alone is not the objective. A short prompt that drops the deciding exception or the attribution is worse in operation than a longer prompt with grounding. Evaluate compression from end to end on answer quality, evidence retention, latency and cost. When the exact source wording is necessary, selective extraction can be safer than a summary.
+
+Prompt learning moves the effort from sentence editing to the design of data, objectives and evaluation loops. Thus, the quality of the evaluation system becomes the main limit.
 
 <SourceNote pages="138-152" />

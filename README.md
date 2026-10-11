@@ -40,7 +40,8 @@ These labs run entirely in the browser. No API key, model provider, database, or
 ## Features
 
 - 22 statically generated lessons across five complete chapters
-- Detailed MDX explanations with equations, tables, callouts, and practical tradeoffs
+- Lesson text written in Simplified Technical English (ASD-STE100 style: short sentences, active voice, one meaning per word), with equations, tables, callouts, and practical tradeoffs
+- UML-style Mermaid diagrams (flowcharts, sequence, class, state, and mind maps) and step-by-step animated SVG diagrams in every chapter
 - Eight accessible interactive concept labs
 - Searchable, alphabetized glossary with 57 linked definitions
 - Section-level source-page navigation and downloadable source PDF
@@ -57,6 +58,7 @@ These labs run entirely in the browser. No API key, model provider, database, or
 - [React](https://react.dev/) and TypeScript
 - [MDX](https://mdxjs.com/) for lesson content
 - [KaTeX](https://katex.org/) for mathematical notation
+- [Mermaid](https://mermaid.js.org/) for UML-style diagrams, plus hand-built animated SVG diagrams
 - [Lucide](https://lucide.dev/) for interface icons
 - [Vitest](https://vitest.dev/) and Testing Library
 - GitHub Actions for continuous integration
@@ -72,10 +74,10 @@ src/
 |   `-- chapters/[chapter]/      # Static chapter and lesson routes
 |-- components/
 |   |-- content/                 # MDX callouts and source notes
+|   |-- diagrams/                # Mermaid and animated SVG diagrams
 |   `-- simulators/              # Isolated interactive concept labs
 |-- content/
-|   |-- chapters/                # Lessons grouped by chapter slug
-|   `-- lesson-components.ts     # Explicit static MDX import map
+|   `-- chapters/                # Lessons grouped by chapter slug (one dynamic import per lesson page)
 `-- lib/                         # Content registry and tested calculations
 public/
 `-- resources/                   # Downloadable source PDF
@@ -120,6 +122,7 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run build` | Create the optimized production build |
 | `npm run check` | Run lint, type checking, tests, and the production build |
+| `npm run check:ui -- --base <url>` | Check 10 device sizes in light and dark: no sideways scroll, text at least 12px, readable diagram labels, 24px tap targets, aligned rows, no console errors (needs Chrome or Edge and a running site; add `--shots <dir>` for screenshots) |
 
 ## Verification
 
@@ -130,6 +133,23 @@ npm run check
 ```
 
 The workflow in `.github/workflows/ci.yml` runs the corresponding checks for pushes to `main` and for pull requests.
+
+The test suite also guards the lesson text and diagrams:
+
+- `src/lib/ste.test.ts` fails on any lesson sentence or diagram caption longer than 25 words, and on words that Simplified Technical English does not allow.
+- `src/lib/diagrams.test.ts` parses every Mermaid chart in the lessons.
+
+### Claude Code
+
+`.claude/settings.json` runs these two tests automatically after Claude Code edits a lesson or a diagram component, and reports any failure back to Claude. It also allows the read-only check commands without a prompt.
+
+### Git on Windows: "detected dubious ownership"
+
+If the repository folder was created by a different Windows user, Git refuses to run in it. Mark the folder as safe once:
+
+```bash
+git config --global --add safe.directory <path-to-this-repo>
+```
 
 ## Deploy to Vercel
 

@@ -10,7 +10,7 @@ export function LessonSidebar({ chapter, activeSlug }: { chapter: Chapter; activ
       <ol>
         {chapter.lessons.map((lesson) => (
           <li key={lesson.slug}>
-            <Link className={activeSlug === lesson.slug ? "active" : ""} href={`/chapters/${chapter.slug}/${lesson.slug}`}>
+            <Link className={activeSlug === lesson.slug ? "active" : ""} href={`/chapters/${chapter.slug}/${lesson.slug}`} prefetch={false}>
               <span>{lesson.number}</span>{lesson.shortTitle}
             </Link>
           </li>

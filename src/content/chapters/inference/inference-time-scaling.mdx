@@ -1,31 +1,78 @@
-Model quality can improve when more computation is spent after training. Inference-time scaling expands the evidence, candidates, or reasoning paths considered for a request and allocates the larger budget where it is useful.
+import { BestOfNDiagram } from "@/components/diagrams/inference"
+
+Model quality can become better when you use more compute after training. Inference-time scaling gives a request more evidence, more candidates or more reasoning paths. It puts the larger budget where it is useful.
+
+<MermaidDiagram
+  title="Four ways to use more compute at inference time"
+  caption="Each method adds a different resource to the request. All four need a way to find the better result, or the added compute gives no benefit."
+  chart={`
+flowchart TB
+  Q[Request] --> C[Context scaling: more evidence]
+  Q --> S[Search scaling: more paths]
+  Q --> E[Output ensembling: more votes]
+  Q --> T[Thinking paths: more steps]
+  C --> V{Verifier or check}
+  S --> V
+  E --> V
+  T --> V
+  V --> A[Answer]
+`}
+/>
 
 <h2 id="context-scaling">Context scaling</h2>
 
-One approach supplies more relevant information: retrieve additional passages, inspect neighboring documents, or iteratively query for missing evidence. Longer context is valuable only when it contains usable signal. Irrelevant or conflicting text can distract the model, increase prefill cost, and consume KV memory.
+One method gives the model more related information:
 
-Retrieval ranking, deduplication, compression, and citation requirements help preserve evidence density. Context scaling is strongest when the answer depends on external knowledge that can be located and checked. It is less helpful when the limiting problem is a novel deduction rather than missing facts.
+- Retrieve more passages.
+- Examine near documents.
+- Query again and again for missing evidence.
+
+Longer context is useful only when it contains a signal that the model can use. Unrelated or conflicting text can distract the model. It also increases the prefill cost and uses KV memory.
+
+Retrieval ranking, deduplication, compression and citation requirements help keep the evidence dense. Context scaling works best when the answer depends on external knowledge that you can find and check. It helps less when the problem is a new deduction and not missing facts.
 
 <h2 id="search-scaling">Search scaling</h2>
 
-Search generates multiple partial or complete solutions and uses a score to decide which paths to extend. Best-of-$N$ sampling chooses the highest-scored candidate. Tree-based methods branch at intermediate steps, retain promising states, and backtrack when a path fails. The compute budget can be fixed or increased for uncertain and high-value requests.
+Search generates many partial or complete solutions. It uses a score to decide which paths to extend.
 
-Search only helps when candidate diversity creates a chance of improvement and the score correlates with real quality. Otherwise, additional branches repeat the same mistake or optimize a weak judge. Track marginal gain as the budget grows because returns usually diminish.
+- **Best-of-$N$ sampling** selects the candidate with the highest score.
+- **Tree-based methods** branch at intermediate steps and keep the good states. When a path fails, they go back.
+
+The compute budget can be fixed. Or it can increase for requests that are not certain or that have high value.
+
+<BestOfNDiagram />
+
+Search helps only when two conditions are true:
+
+- The candidates are diverse enough to give a chance of improvement.
+- The score agrees with the real quality.
+
+If these conditions are not true, more branches repeat the same error or optimize a weak judge. Monitor the added gain as the budget increases, because the returns usually decrease.
 
 <h2 id="output-ensembling">Output ensembling</h2>
 
-Ensembling aggregates independent outputs rather than selecting a single highest score. Majority vote works for discrete answers, while weighted voting, ranking, or a judge can combine richer responses. Self-consistency samples multiple reasoning paths and selects the conclusion with the strongest agreement.
+Ensembling combines independent outputs. It does not select only one highest score.
 
-Agreement is evidence only when errors are not perfectly correlated. Models trained alike or prompted identically may share the same blind spot. Encourage meaningful diversity, normalize answers before voting, and prefer executable or source-grounded validation when available.
+- A majority vote works for discrete answers.
+- Weighted voting, ranking or a judge can combine longer responses.
+- Self-consistency samples many reasoning paths and selects the conclusion that most paths agree on.
 
-<h2 id="thinking-paths">Thinking paths</h2>
+Agreement is evidence only when the errors are not fully correlated. Models with the same training, or with the same prompt, can have the same blind spot. Thus, add useful diversity. Normalize the answers before the vote. When possible, prefer validation that you can run or that uses sources.
 
-For mathematics, code, planning, and other structured tasks, a system can generate intermediate steps and verify them incrementally. Process reward models score partial trajectories; external checkers execute code or validate constraints; critique-and-revision loops repair a draft. A verifier can stop an invalid branch before spending the full generation budget.
+<h2 id="thinking-paths">Generate and verify paths</h2>
 
-Adaptive policies reserve extra computation for hard requests. Easy inputs complete after one pass, while uncertain cases trigger more context, samples, search, or a stronger model. This turns serving into a decision about how to allocate compute, not merely which token sampler to use.
+For mathematics, code, planning and other structured tasks, a system can generate intermediate steps and verify them one by one:
 
-<Callout title="The verifier is the leverage point">
-  <p>Generating more candidates is useful only when the system can recognize better ones. Prefer tests, grounded evidence, or independently trained evaluators over confidence alone.</p>
+- Process reward models give scores to partial paths.
+- External checkers run code or validate limits.
+- Critique-and-revision loops repair a draft.
+
+A verifier can stop an invalid branch before the system uses the full generation budget.
+
+Adaptive policies keep extra compute for difficult requests. Easy inputs finish after one pass. Inputs that are not certain start more context, more samples, more search or a stronger model. Thus, serving becomes a decision about how to use compute, not only a choice of token sampler.
+
+<Callout title="The verifier gives the benefit">
+  <p>More candidates are useful only when the system can find the better ones. Prefer tests, grounded evidence or independently trained evaluators to confidence alone.</p>
 </Callout>
 
 <SourceNote pages="234-244" />

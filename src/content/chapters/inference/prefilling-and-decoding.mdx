@@ -1,64 +1,115 @@
 import { InferenceLab } from "@/components/simulators/inference-lab"
+import { PrefillDecodeDiagram, SamplingDiagram } from "@/components/diagrams/inference"
 
-Inference is the process of turning a trained model and a request into generated tokens. Its two phases have different computational shapes, and the decoding rule changes the quality, diversity, and cost of the result.
+Inference is the process that uses a trained model and a request to make generated tokens. Inference has two phases. Each phase uses compute in a different way. The decoding rule changes the quality, the diversity and the cost of the result.
 
 <Callout title="Learning objectives">
   <ul>
-    <li>Trace a request from tokenization through prefilling and autoregressive decoding.</li>
-    <li>Compare greedy, beam, and sampling-based decoding.</li>
-    <li>Choose serving metrics that match an interactive or batch workload.</li>
+    <li>Follow a request from tokenization through prefilling and token-by-token decoding.</li>
+    <li>Compare greedy decoding, beam search and sampling-based decoding.</li>
+    <li>Select serving metrics that match an interactive workload or a batch workload.</li>
   </ul>
 </Callout>
 
 <h2 id="inference-preliminaries">Inference preliminaries</h2>
 
-The serving stack first tokenizes the prompt, constructs positions and masks, and places the request into a scheduler. The model then computes logits for the next token. A decoding policy converts those logits into a token choice, appends that token to the sequence, and repeats until a stop condition or token limit is reached.
+A request goes through these steps:
 
-For vocabulary logits $z$, the next-token distribution is
+1. The serving stack splits the prompt into tokens.
+2. It builds the positions and the masks.
+3. It puts the request into a scheduler.
+4. The model calculates the logits for the next token.
+5. A decoding policy changes the logits into a token choice.
+6. The system adds this token to the sequence.
+7. Steps 4 to 6 occur again until a stop condition or the token limit.
+
+<MermaidDiagram
+  title="The path of one request"
+  caption="Prefill runs one time for the full prompt. The decode loop then runs one time for each output token, until a stop condition."
+  chart={`
+sequenceDiagram
+  actor U as User
+  participant S as Scheduler
+  participant M as Model
+  participant C as KV cache
+  U->>S: Prompt text
+  S->>S: Tokenize, build positions and masks
+  S->>M: Prefill all prompt tokens
+  M->>C: Store keys and values for each layer
+  M-->>U: First token (TTFT ends here)
+  loop For each new token, until stop
+    S->>M: Newest token
+    M->>C: Read cached keys and values, append new ones
+    M-->>U: Next token (inter-token latency)
+  end
+`}
+/>
+
+For the vocabulary logits $z$, this is the next-token distribution:
 
 $$
 P(y_t=i \mid x,y_{<t}) = \frac{\exp(z_i)}{\sum_j \exp(z_j)}.
 $$
 
-Generation is sequential at the token boundary: token $t+1$ depends on the token selected at step $t$. Systems recover efficiency by parallelizing the work inside each step and by processing many requests together.
+The softmax changes each logit $z_i$ into the probability that the next token is token $i$.
 
-<h2 id="two-phase-inference">Two-phase inference</h2>
+Generation is sequential at the token boundary. Token $t+1$ depends on the token that the model selected at step $t$. Systems get efficiency back in two ways:
 
-**Prefilling** processes all prompt tokens through the Transformer. Large matrix operations run across positions in parallel, and the phase creates the attention keys and values for every layer. It ends with the distribution for the first output token.
+- They do the work inside each step in parallel.
+- They process many requests together.
 
-**Decoding** processes one newly selected token per request at each step while reading the cached keys and values for the full context. The operations are smaller and repeatedly scheduled, so memory bandwidth, cache capacity, and request coordination become central bottlenecks.
+<h2 id="two-phase-inference">The two-phase framework</h2>
 
-Long prompts increase prefill time, while long responses increase the number of sequential decode steps. Separating these two dimensions is important when diagnosing latency or deciding which optimization matters.
+**Prefilling** sends all the prompt tokens through the Transformer. Large matrix operations run across the positions in parallel. This phase makes the attention keys and values for each layer. It ends with the distribution for the first output token.
+
+**Decoding** processes one new selected token for each request at each step. It also reads the cached keys and values for the full context. The operations are smaller, and the scheduler runs them again and again. Thus, the main bottlenecks are memory bandwidth, cache capacity and request coordination.
+
+<PrefillDecodeDiagram />
+
+Long prompts increase the prefill time. Long responses increase the number of sequential decode steps. Keep these two dimensions separate when you find the cause of latency, or when you decide which optimization to use.
 
 <h2 id="decoding-algorithms">Decoding algorithms</h2>
 
-Greedy decoding selects the highest-probability token at every step. It is deterministic and cheap but can commit early to a locally attractive continuation. Beam search keeps several partial sequences and expands the most promising accumulated scores; it is useful for constrained sequence tasks but adds memory and compute.
+**Greedy decoding** selects the token with the highest probability at each step. It always gives the same result, and it costs little. But it can select a continuation that looks good locally too early.
 
-Sampling preserves diversity by drawing from the next-token distribution. Temperature rescales logits,
+**Beam search** keeps some partial sequences and expands the sequences with the best total scores. It is useful for sequence tasks with limits. But it uses more memory and compute.
+
+**Sampling** keeps diversity, because it takes a random draw from the next-token distribution. Temperature changes the scale of the logits:
 
 $$
 P_T(i) \propto \exp(z_i/T),
 $$
 
-where lower $T$ concentrates probability and higher $T$ flattens it. Top-$k$ sampling restricts choices to the $k$ most probable tokens, while nucleus or top-$p$ sampling keeps the smallest set whose cumulative probability reaches $p$.
+Each logit is divided by the temperature $T$ before the softmax.
 
-No decoder is universally best. Exact or low-variance tasks favor restrained choices and validation. Creative tasks need diversity. Problems with reliable verifiers can sample several candidates and select among them.
+- A lower $T$ puts more probability on the top tokens.
+- A higher $T$ makes the distribution flatter.
+- **Top-$k$ sampling** limits the choice to the $k$ most probable tokens.
+- **Nucleus (top-$p$) sampling** keeps the smallest set of tokens whose total probability gets to $p$.
+
+<SamplingDiagram />
+
+No decoder is the best for all tasks:
+
+- Exact tasks, or tasks that need low variance, need careful choices and validation.
+- Creative tasks need diversity.
+- For problems with a reliable verifier, sample some candidates and select from them.
 
 <h2 id="serving-metrics">Serving metrics</h2>
 
-System quality requires more than tokens per second:
+Tokens per second is not sufficient to measure system quality. Use these metrics:
 
-| Metric | What it measures | Usually felt as |
+| Metric | What it measures | How the user usually feels it |
 | --- | --- | --- |
-| Time to first token (TTFT) | Arrival to first generated token | Initial responsiveness |
-| Inter-token latency (ITL) | Delay between streamed tokens | Smoothness of output |
-| End-to-end latency | Arrival to completed response | Total wait |
-| Throughput | Tokens or requests completed per time | Fleet efficiency |
-| Goodput | Work meeting a service target | Useful capacity |
-| Memory/utilization | Resource occupancy and activity | Cost headroom |
+| Time to first token (TTFT) | From arrival to the first generated token | First response speed |
+| Inter-token latency (ITL) | Time between streamed tokens | Smoothness of the output |
+| End-to-end latency | From arrival to the full response | Total wait |
+| Throughput | Tokens or requests completed in a unit of time | Efficiency of the fleet |
+| Goodput | Work that meets a service target | Useful capacity |
+| Memory and utilization | How much of the resources is in use and active | Margin for cost |
 
 <InferenceLab />
 
-Interactive chat may prioritize TTFT and steady streaming. Offline evaluation may accept queueing delay to maximize throughput. Report distributions and tail latency, not only averages, because a small group of long requests can dominate user experience.
+Interactive chat can give priority to TTFT and steady streaming. Offline evaluation can accept a queue delay to get the maximum throughput. Report distributions and tail latency, not only averages. A small group of long requests can control the user experience.
 
 <SourceNote pages="204-221" />

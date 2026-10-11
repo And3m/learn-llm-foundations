@@ -15,10 +15,10 @@ export function BertMaskingLab() {
   const candidates = useMemo(() => example.candidates, [example]);
   function selectExample(index: number) { setExampleIndex(index); setMaskIndex(examples[index].defaultMask); }
   return (
-    <SimulatorFrame number="03" title="What can BERT infer from both sides?" description="Choose a sentence and hide a token. The example distribution shows how context narrows the possibilities.">
+    <SimulatorFrame number="03" title="What can BERT infer from both sides?" description="Select a sentence and hide a token. The example distribution shows how the context decreases the number of possible words.">
       <div className="lab-toolbar">
         <label>Sentence<select value={exampleIndex} onChange={(event) => selectExample(Number(event.target.value))}><option value={0}>Reading directions</option><option value={1}>Context and meaning</option></select></label>
-        <span>Click any token to mask it</span>
+        <span>Click a token to mask it</span>
       </div>
       <div className="masking-grid">
         <div className="mask-sentence">
@@ -30,7 +30,7 @@ export function BertMaskingLab() {
           {candidates.map(([word, value], index) => <div key={word}><span>{maskIndex === example.defaultMask ? word : index === 0 ? example.tokens[maskIndex] : word}</span><i><b style={{ width: `${value}%` }} /></i><small>{value}%</small></div>)}
         </div>
       </div>
-      <p className="simulator-disclaimer">Illustrative probabilities, not a live model inference.</p>
+      <p className="simulator-disclaimer">These are example probabilities. They do not come from a live model.</p>
     </SimulatorFrame>
   );
 }
