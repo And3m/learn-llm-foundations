@@ -7,7 +7,7 @@ import { SimulatorFrame } from "./simulator-frame";
 const modes: { key: AdaptationMode; label: string; detail: string }[] = [
   { key: "features", label: "Feature extraction", detail: "Freeze the backbone and train only a small task head." },
   { key: "partial", label: "Partial fine-tuning", detail: "Update the task head and the last few Transformer layers." },
-  { key: "full", label: "Full fine-tuning", detail: "Update every layer for maximum task-specific flexibility." },
+  { key: "full", label: "Full fine-tuning", detail: "Update all the layers. This gives the most flexibility for the task." },
 ];
 
 export function AdaptationExplorer() {
@@ -16,7 +16,7 @@ export function AdaptationExplorer() {
   const percent = trainablePercent(mode, layers);
   const detail = modes.find((item) => item.key === mode)?.detail;
   return (
-    <SimulatorFrame number="04" title="How much of the model should move?" description="Adaptation trades compute and data efficiency for task-specific flexibility.">
+    <SimulatorFrame number="04" title="How much of the model should move?" description="More trainable parameters give more flexibility for the task. But they need more compute and more data.">
       <div className="adaptation-layout">
         <div>
           <div className="mode-cards">
@@ -33,7 +33,7 @@ export function AdaptationExplorer() {
           <div className="trainable-readout"><strong>{percent}%</strong><span>parameters trainable</span></div>
         </div>
       </div>
-      <p className="objective-relation">{detail} The percentage is a conceptual estimate that includes the task head.</p>
+      <p className="objective-relation">{detail} The percentage is an approximate value. It includes the task head.</p>
     </SimulatorFrame>
   );
 }
