@@ -133,6 +133,23 @@ npm run check
 
 The workflow in `.github/workflows/ci.yml` runs the corresponding checks for pushes to `main` and for pull requests.
 
+The test suite also guards the lesson text and diagrams:
+
+- `src/lib/ste.test.ts` fails on any lesson sentence or diagram caption longer than 25 words, and on words that Simplified Technical English does not allow.
+- `src/lib/diagrams.test.ts` parses every Mermaid chart in the lessons.
+
+### Claude Code
+
+`.claude/settings.json` runs these two tests automatically after Claude Code edits a lesson or a diagram component, and reports any failure back to Claude. It also allows the read-only check commands without a prompt.
+
+### Git on Windows: "detected dubious ownership"
+
+If the repository folder was created by a different Windows user, Git refuses to run in it. Mark the folder as safe once:
+
+```bash
+git config --global --add safe.directory <path-to-this-repo>
+```
+
 ## Deploy to Vercel
 
 1. Push the repository to GitHub.
