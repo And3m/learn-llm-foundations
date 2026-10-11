@@ -20,6 +20,7 @@
 .dg text.dg-mono { font-family: var(--font-mono), monospace; font-size: 12px; }
 .dg text.dg-title { font-size: 12px; font-weight: 600; fill: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .dg text.dg-on { fill: var(--signal); font-weight: 600; }
+.dg text.dg-on-fill { fill: var(--background); font-size: 11px; font-weight: 700; }
 .dg .dg-box { fill: var(--surface); stroke: var(--border); stroke-width: 1.5; transition: fill .45s ease, stroke .45s ease, opacity .45s ease; }
 .dg .dg-box.dg-on { fill: var(--signal-soft); stroke: var(--signal); }
 .dg .dg-box.dg-dim { opacity: .35; }

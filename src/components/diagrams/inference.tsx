@@ -182,7 +182,7 @@ function Lane({ title, schedule, y, time }: { title: string; schedule: Cell[][];
           return (
             <g key={`${slot}-${t}`}>
               <rect x={70 + t * cell} y={y + slot * 24} width={cell - 4} height={20} rx={4} className={padding ? "dg-fill-off" : "ABCD".includes(value) ? "dg-fill-alt" : "dg-fill-on"} opacity={padding ? 1 : 0.85} />
-              <Label x={70 + t * cell + (cell - 4) / 2} y={y + slot * 24 + 14} small>{padding ? "idle" : value}</Label>
+              <text x={70 + t * cell + (cell - 4) / 2} y={y + slot * 24 + 14} textAnchor="middle" className={padding ? "dg-small" : "dg-on-fill"}>{padding ? "idle" : value}</text>
             </g>
           );
         }),
