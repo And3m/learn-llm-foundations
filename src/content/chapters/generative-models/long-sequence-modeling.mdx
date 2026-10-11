@@ -45,12 +45,12 @@ Architecture methods change which interactions the model calculates:
 
 - **Local attention** connects each token to a sliding window of near tokens.
 - **Sparse attention** combines local patterns with some selected global or strided links.
-- **Linearized attention** changes the order of the calculation, or uses an approximation, so that there is no explicit $n\times n$ matrix.
+- **Linearized attention** first changes the attention formula, for example with a kernel that approximates the softmax. Then it changes the order of the calculation, so that the cost increases linearly with $n$. Tiled attention is different: it keeps the exact result and saves memory, but its cost still increases with $n^2$.
 - **Chunked recurrence** sends a compressed state from one segment to the next.
 
 <SparseAttentionDiagram />
 
-Sparse patterns work well when distant information can move through a small number of hops or through global tokens. But they can miss some long-range dependencies. Linear approximations decrease the cost as $n$ increases. But they can change the normalized interactions that make softmax attention expressive.
+Sparse patterns work well when distant information can move through a small number of hops, or through global tokens that all positions can read. But they can miss some long-range dependencies. Linear approximations decrease the cost as $n$ increases. But they can change the normalized interactions that make softmax attention expressive.
 
 Do not ask "Is the attention linear?". Ask this question: "For this workload, which token pairs must exchange information directly?"
 

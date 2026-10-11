@@ -44,7 +44,7 @@ The training loop has three steps:
 
 <MermaidDiagram
   title="One RLHF training iteration"
-  caption="The reward model scores each response. The KL penalty compares the policy with the frozen reference model, so the policy cannot move too far to get a high score."
+  caption="The reward model scores each response. The optimizer compares the token probabilities of the policy and the frozen reference model. The KL penalty discourages large moves away from the reference."
   chart={`
 sequenceDiagram
   participant D as Prompt dataset
@@ -56,8 +56,10 @@ sequenceDiagram
   P->>P: Generate response y
   P->>RM: (x, y)
   RM-->>O: Reward r_φ(x, y)
-  P->>Ref: Token probabilities of y
-  Ref-->>O: KL penalty β·KL(π_θ ‖ π_ref)
+  P-->>O: Log-probabilities of y under π_θ
+  P->>Ref: (x, y)
+  Ref-->>O: Log-probabilities of y under π_ref
+  O->>O: KL penalty β·KL(π_θ ‖ π_ref)
   O->>O: Estimate advantage
   O->>P: Update θ
 `}
@@ -72,7 +74,7 @@ $$
 
 The policy tries to get a high average reward. The second term subtracts a penalty when the policy becomes too different from the reference model.
 
-The KL term limits the policy movement. Thus, the optimization does not lose fluency, diversity or general skills when it tries to get a higher learned score. The coefficient $\beta$ controls how strong this limit is.
+The KL term gives a penalty when the policy moves away from the reference. This helps decrease the risk that the optimization loses fluency, diversity or general skills to get a higher learned score. It does not guarantee it. The coefficient $\beta$ controls how strong this penalty is.
 
 RLHF is difficult to operate. It mixes generation, scoring, advantage estimation, policy updates and stability controls.
 

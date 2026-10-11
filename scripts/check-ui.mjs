@@ -70,7 +70,18 @@ for (let attempt = 0; attempt < 60 && !targets; attempt += 1) {
     await sleep(250);
   }
 }
-const ws = new WebSocket(targets.find((target) => target.type === "page").webSocketDebuggerUrl);
+const pageTarget = targets?.find((target) => target.type === "page");
+if (!pageTarget) {
+  chrome.kill();
+  try {
+    rmSync(profile, { recursive: true, force: true });
+  } catch {
+    // Chrome can keep the profile locked for a moment on Windows.
+  }
+  console.error(`The browser did not open its DevTools port (${port}). Close other headless browsers and try again.`);
+  process.exit(2);
+}
+const ws = new WebSocket(pageTarget.webSocketDebuggerUrl);
 await new Promise((resolve) => ws.addEventListener("open", resolve));
 let nextId = 0;
 const pending = new Map();

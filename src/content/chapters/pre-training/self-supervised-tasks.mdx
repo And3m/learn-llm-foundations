@@ -225,7 +225,11 @@ A span-corrupted input can be:
 
 > Reliable systems [MASK] before deployment.
 
-An encoder-only model predicts the hidden tokens at their aligned positions. An encoder-decoder model can generate "test assumptions" as a target sequence. The visible evidence is almost the same. But the output interface and the probability factorization are different.
+An encoder-only model needs one mask for each hidden token:
+
+> Reliable systems [MASK] [MASK] before deployment.
+
+It predicts each hidden token at its aligned position. An encoder-decoder model can use the single placeholder above and generate "test assumptions" as a target sequence. The visible evidence is almost the same. But the output interface and the probability factorization are different.
 
 <h2 id="choosing-an-objective">Comparing objectives</h2>
 

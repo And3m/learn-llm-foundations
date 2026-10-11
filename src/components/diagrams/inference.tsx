@@ -202,7 +202,7 @@ export function ContinuousBatchingDiagram() {
   return (
     <DiagramFrame
       title="Static batching compared with continuous batching"
-      caption="Requests A to D start together. E, F and G wait. Static batching waits for the full batch to finish, so slots stay idle. Continuous batching puts a waiting request into a slot as soon as the slot is free, so all seven requests finish sooner."
+      caption="Requests A to D start together. E, F and G wait. Static batching waits for the full batch to finish, so slots stay idle. Continuous batching puts a waiting request into a slot as soon as the slot is free. Thus, E, F and G finish sooner."
       steps={steps}
       stepLabels={Array.from({ length: steps }, (_, index) => `Decode step ${index + 1}`)}
       intervalMs={1100}

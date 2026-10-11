@@ -25,11 +25,10 @@ export function FewShotDiagram() {
           <Svg width={640} height={260}>
             <Label x={16} y={20} title anchor="start">Prompt ({shot.name})</Label>
             <Box x={16} y={30} w={260} h={34} label="Instruction: classify urgency" state="alt" rx={6} />
-            {demos.map((demo, index) => (
-              <g key={demo} opacity={index < shot.examples ? 1 : 0.15} className="dg-fade">
-                <Box x={16} y={72 + index * 40} w={260} h={32} label={demo} state={index < shot.examples ? "on" : "off"} rx={6} />
-              </g>
+            {demos.slice(0, shot.examples).map((demo, index) => (
+              <Box key={demo} x={16} y={72 + index * 40} w={260} h={32} label={demo} state="on" rx={6} />
             ))}
+            {shot.examples === 0 ? <Label x={146} y={130} small>No demonstrations</Label> : null}
             <Box x={16} y={196} w={260} h={34} label="“App crashes at login” → ?" rx={6} />
             <Arrow x1={282} y1={130} x2={340} y2={130} on />
             <Box x={344} y={104} w={120} h={52} label="Frozen LLM" sub="weights do not change" state="frozen" />

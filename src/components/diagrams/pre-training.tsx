@@ -115,7 +115,7 @@ const selected: Record<number, { rule: string; shown: string }> = {
   3: { rule: "10% → keep", shown: "bird" },
   6: { rule: "10% → random", shown: "apple" },
 };
-const maskSteps = ["Original input", "Select about 15% of the tokens", "Apply the 80/10/10 rule", "Predict the original tokens"];
+const maskSteps = ["Original input", "Select some tokens", "Change them: one example of each case", "Predict the original tokens"];
 
 export function BertMaskingDiagram() {
   const w = 70;
@@ -124,7 +124,7 @@ export function BertMaskingDiagram() {
   return (
     <DiagramFrame
       title="BERT masking, step by step"
-      caption="BERT selects some tokens, changes most of them, and then predicts the original token at each selected position. The unselected tokens do not add to the loss."
+      caption="An illustration, not real proportions. In training, BERT selects about 15% of the tokens, and the 80/10/10 split applies across many selected tokens. The unselected tokens do not add to the loss."
       steps={4}
       stepLabels={maskSteps}
       intervalMs={2000}
