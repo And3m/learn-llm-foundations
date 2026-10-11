@@ -7,11 +7,11 @@ Model quality can become better when you use more compute after training. Infere
   caption="Each method adds a different resource to the request. All four need a way to find the better result, or the added compute gives no benefit."
   chart={`
 flowchart TB
-  Q[Request] --> C[Context scaling: more evidence]
-  Q --> S[Search scaling: more paths]
-  Q --> E[Output ensembling: more votes]
-  Q --> T[Thinking paths: more steps]
-  C --> V{Verifier or check}
+  Q[Request] --> C["Context scaling<br/>more evidence"]
+  Q --> S["Search scaling<br/>more paths"]
+  Q --> E["Output ensembling<br/>more votes"]
+  Q --> T["Thinking paths<br/>more steps"]
+  C --> V([Verifier or check])
   S --> V
   E --> V
   T --> V

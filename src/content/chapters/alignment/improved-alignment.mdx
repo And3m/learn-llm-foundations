@@ -48,12 +48,12 @@ flowchart TB
   subgraph RLHF
     direction TB
     P1[Preference pairs] --> RM[Train reward model]
-    RM --> L[Online loop: sample, score, PPO update]
+    RM --> L["Online RL loop<br/>(sample, score, PPO)"]
     L --> A1[Aligned policy]
   end
   subgraph DPO
     direction TB
-    P2[Preference pairs] --> D[One supervised loss on chosen vs rejected log-probabilities]
+    P2[Preference pairs] --> D["One supervised loss<br/>(chosen vs rejected)"]
     D --> A2[Aligned policy]
   end
   REF[Reference policy] -.-> L

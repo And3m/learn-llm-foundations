@@ -46,15 +46,15 @@ classDiagram
   class Context {
     facts
     source material
-    rule for missing evidence
+    missing-data rule
   }
   class Examples {
     input-output pairs
     edge cases
   }
   class OutputContract {
-    structure or schema
-    length and tone
+    schema
+    length, tone
   }
   Prompt *-- Instruction
   Prompt *-- Context

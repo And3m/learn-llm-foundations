@@ -31,6 +31,9 @@ async function loadMermaid(theme: string): Promise<Mermaid> {
     securityLevel: "strict",
     theme: "base",
     fontFamily: "inherit",
+    // Tighter spacing keeps wide sequence diagrams and mind maps narrow enough to fit a lesson column.
+    sequence: { width: 110, actorMargin: 30, boxMargin: 8, noteMargin: 8, messageMargin: 32, wrap: true },
+    mindmap: { padding: 6 },
     themeVariables: {
       darkMode: theme === "dark",
       background: token(styles, "--background"),
@@ -56,6 +59,14 @@ async function loadMermaid(theme: string): Promise<Mermaid> {
       labelBoxBkgColor: token(styles, "--surface-2"),
       edgeLabelBackground: token(styles, "--background"),
       fontSize: "14px",
+      // Mind maps color each branch from this palette. Use the theme's soft green with readable labels.
+      ...Object.fromEntries(
+        Array.from({ length: 12 }, (_, index) => [
+          [`cScale${index}`, token(styles, "--signal-soft")],
+          [`cScaleLabel${index}`, token(styles, "--foreground")],
+          [`cScalePeer${index}`, token(styles, "--signal")],
+        ]).flat(),
+      ),
     },
   });
   configuredTheme = theme;

@@ -47,7 +47,7 @@ stateDiagram-v2
   [*] --> Queued: request arrives
   Queued --> Prefill: KV memory available
   Prefill --> Decoding: first token sent
-  Decoding --> Decoding: one token per step
+  note right of Decoding: one token per step
   Decoding --> Preempted: KV memory is low
   Preempted --> Queued: wait for memory
   Decoding --> Finished: stop token or limit

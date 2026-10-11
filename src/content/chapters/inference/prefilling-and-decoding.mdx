@@ -33,14 +33,14 @@ sequenceDiagram
   participant M as Model
   participant C as KV cache
   U->>S: Prompt text
-  S->>S: Tokenize, build positions and masks
-  S->>M: Prefill all prompt tokens
-  M->>C: Store keys and values for each layer
-  M-->>U: First token (TTFT ends here)
-  loop For each new token, until stop
+  S->>S: Tokenize, add positions
+  S->>M: Prefill the prompt
+  M->>C: Store K, V per layer
+  M-->>U: First token (TTFT)
+  loop Each new token, until stop
     S->>M: Newest token
-    M->>C: Read cached keys and values, append new ones
-    M-->>U: Next token (inter-token latency)
+    M->>C: Read cache, add new K, V
+    M-->>U: Next token (ITL)
   end
 `}
 />
