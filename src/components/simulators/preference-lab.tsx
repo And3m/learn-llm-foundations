@@ -11,9 +11,9 @@ const responses = [
 export function PreferenceLab() {
   const [choice, setChoice] = useState(1);
   return (
-    <SimulatorFrame number="4.1" title="Create a preference signal" description="A comparison supplies a relative signal: which response better matches the desired behavior?">
+    <SimulatorFrame number="4.1" title="Create a preference signal" description="A comparison gives a relative signal. It shows which response matches the desired behavior better.">
       <div className="preference-grid">{responses.map((response, index) => <button type="button" key={response.label} aria-pressed={choice === index} onClick={() => setChoice(index)}><small>Response {response.label}</small><p>{response.text}</p><span>Helpful {response.helpful} · Safe {response.safe}</span></button>)}</div>
-      <div className="lab-result"><strong>Chosen: response {responses[choice].label}</strong><p>The chosen/rejected pair can train a reward model for RLHF or enter a direct preference objective such as DPO. It does not provide an absolute definition of “good.”</p></div>
+      <div className="lab-result"><strong>Chosen: response {responses[choice].label}</strong><p>The chosen and rejected pair can train a reward model for RLHF. It can also go into a direct preference objective, for example DPO. It does not give an absolute definition of “good”.</p></div>
     </SimulatorFrame>
   );
 }

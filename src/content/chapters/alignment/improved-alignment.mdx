@@ -1,33 +1,111 @@
-Later alignment methods improve the preference signal, simplify policy optimization, or move additional selection and verification to inference time. Each approach changes where complexity lives; none removes the need for representative data and independent evaluation.
+import { ProcessSupervisionDiagram } from "@/components/diagrams/alignment"
+
+Later alignment methods do one of these things:
+
+- Make the preference signal better.
+- Make policy optimization simpler.
+- Move more selection and verification to inference time.
+
+Each method moves the complexity to a different location. No method removes the need for data that represents real use, or for independent evaluation.
 
 <h2 id="better-reward-modeling">Better reward modeling</h2>
 
-Reward systems can use rankings rather than isolated pairs, separate axes such as correctness and safety, ensembles of scorers, uncertainty estimates, and adversarially selected examples. Process supervision scores intermediate steps, while outcome supervision scores only the final result. Process labels can reveal a flawed derivation that happened to end correctly, though they are more expensive to collect.
+Reward systems can use these methods:
 
-Rejection sampling is a useful baseline: generate multiple responses, score them, retain the best, and optionally fine-tune on the selected set. It avoids online policy optimization but cannot select an answer the current policy never generates, and it remains limited by the scorer.
+- Rankings, not only single pairs.
+- Separate axes, for example correctness and safety.
+- Ensembles of scorers.
+- Uncertainty estimates.
+- Examples that are selected to be difficult.
+
+There are two types of supervision:
+
+- **Process supervision** gives a score to each intermediate step.
+- **Outcome supervision** gives a score only to the final result.
+
+Process labels can find a bad derivation that gave a correct end result by chance. But they are more expensive to collect.
+
+<ProcessSupervisionDiagram />
+
+Rejection sampling is a useful baseline:
+
+1. Generate many responses.
+2. Give each response a score.
+3. Keep the best responses.
+4. Optionally, fine-tune on the selected set.
+
+This method does not need online policy optimization. But it cannot select an answer that the current policy never generates. Also, the scorer still limits it.
 
 <h2 id="direct-preference-optimization">Direct preference optimization</h2>
 
-Direct preference optimization (DPO) trains a policy directly on chosen and rejected responses. It increases the chosen response’s relative likelihood while comparing the update with a fixed reference policy. This connects the preference model and policy objective algebraically, eliminating a separately trained reward model and online RL rollouts from the training loop.
+Direct preference optimization (DPO) trains a policy directly on chosen and rejected responses. It increases the relative likelihood of the chosen response. It also compares the update with a fixed reference policy. An algebraic relation connects the preference model and the policy objective. Thus, the training loop does not need a separately trained reward model or online RL rollouts.
 
-DPO is simpler to implement and often stable, but it still depends on preference coverage, response pair quality, the reference policy, and the strength of the divergence control. Direct optimization does not make biased labels or distribution shift disappear.
+<MermaidDiagram
+  title="RLHF compared with DPO"
+  caption="The two methods start from the same preference pairs and the same reference policy. DPO removes the separate reward model and the online sampling loop."
+  chart={`
+flowchart TB
+  subgraph RLHF
+    direction LR
+    P1[Preference pairs] --> RM[Train reward model]
+    RM --> L[Online loop: sample, score, PPO update]
+    L --> A1[Aligned policy]
+  end
+  subgraph DPO
+    direction LR
+    P2[Preference pairs] --> D[One supervised loss on chosen vs rejected log-probabilities]
+    D --> A2[Aligned policy]
+  end
+  REF[Reference policy] -.-> L
+  REF -.-> D
+`}
+/>
 
-<h2 id="automatic-preferences">Automatic preferences</h2>
+DPO is simpler to implement and is often stable. But it still depends on these items:
 
-Strong models can generate critiques, revisions, or preference labels from written principles. Automated feedback expands rare-case coverage and reduces annotation cost. It is particularly useful when rules can be stated clearly or verified mechanically.
+- The coverage of the preferences.
+- The quality of the response pairs.
+- The reference policy.
+- The strength of the divergence control.
 
-The evaluator may share the policy’s misconceptions or favor its own style. Use human audits, multiple evaluators, disagreement sampling, and rule-based checks to prevent a self-reinforcing feedback loop. Synthetic labels should retain provenance and confidence so they can be analyzed separately.
+Direct optimization does not remove biased labels or distribution shift.
 
-<h2 id="stepwise-alignment">Stepwise alignment</h2>
+<h2 id="automatic-preferences">Automatic preference data</h2>
 
-Stepwise methods supervise the process of reaching an answer. A complex task can be decomposed into checkable stages; intermediate claims can be critiqued, verified, or rewarded before the final response is produced. This improves observability and can locate the first failure rather than judging only the endpoint.
+Strong models can generate critiques, revisions or preference labels from written principles. Automatic feedback covers more rare cases and decreases the annotation cost. It is very useful when you can state the rules clearly or check them with a program.
 
-It also expands the attack surface for specification errors. A prescribed process may penalize valid alternative solutions, and convincing intermediate text may still be false. Prefer verifiable steps and preserve flexibility where multiple correct methods exist.
+The evaluator can have the same wrong ideas as the policy, or it can prefer its own style. To stop a feedback loop that makes these errors stronger, use these methods:
+
+- Human audits.
+- More than one evaluator.
+- Sampling of the cases where evaluators disagree.
+- Rule-based checks.
+
+Synthetic labels must keep their source and their confidence. Then you can analyze them separately.
+
+<h2 id="stepwise-alignment">Step-by-step alignment</h2>
+
+Stepwise methods supervise the process that gives an answer. You can divide a complex task into stages that you can check. Before the final response, you can critique, verify or reward the intermediate claims. This makes the process easier to observe. It can also find the first failure, not only judge the end result.
+
+But it also gives more locations for specification errors:
+
+- A fixed process can give a penalty to a different solution that is also valid.
+- Intermediate text can be convincing but false.
+
+Prefer steps that you can verify. Keep flexibility where there is more than one correct method.
 
 <h2 id="inference-time-alignment">Inference-time alignment</h2>
 
-Alignment can continue during generation. A system may sample several candidates, apply safety and factual checks, revise a response, call tools, or search through reasoning paths before returning an answer. This spends compute selectively and can enforce constraints that are easy to validate at runtime.
+Alignment can continue during generation. Before a system returns an answer, it can do these things:
 
-Training-time and inference-time methods are complementary. Training shapes the default policy; runtime controls adapt behavior to a request and current evidence. Evaluate the complete loop, including selectors, tools, fallbacks, latency, and failure handling.
+- Sample some candidates.
+- Apply safety checks and factual checks.
+- Revise a response.
+- Call tools.
+- Search through reasoning paths.
+
+This uses compute only where it is necessary. It can also enforce limits that are easy to check at runtime.
+
+Training-time methods and inference-time methods work together. Training shapes the default policy. Runtime controls adapt the behavior to a request and to the current evidence. Evaluate the full loop, including the selectors, the tools, the fallbacks, the latency and the failure handling.
 
 <SourceNote pages="187-200" />
