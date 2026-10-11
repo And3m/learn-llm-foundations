@@ -1,14 +1,20 @@
 import { ScalingExplorer } from "@/components/simulators/scaling-explorer"
+import { AutoregressiveDiagram } from "@/components/diagrams/generative-models"
 
-A modern large language model is a decoder-only language model developed at enough data, parameter, and compute scale to support broad transfer. Its visible behavior is not produced by pre-training alone: task fine-tuning, alignment, prompting, and decoding all act on the same probability model.
+A modern large language model (LLM) is a decoder-only language model. Its data, parameters and compute are large enough to transfer to many tasks. Pre-training alone does not make its visible behavior. Task fine-tuning, alignment, prompting and decoding all change the same probability model.
 
 <Callout title="Learning objectives">
-  <p>Trace the architecture and probability factorization of a decoder-only Transformer, distinguish pre-training from later tuning stages, and explain how alignment and prompting turn a completion model into an interactive system.</p>
+  <p>After this lesson, you can do these tasks:</p>
+  <ul>
+    <li>Describe the architecture and the probability factorization of a decoder-only Transformer.</li>
+    <li>Tell the difference between pre-training and the later tuning stages.</li>
+    <li>Explain how alignment and prompting change a completion model into an interactive system.</li>
+  </ul>
 </Callout>
 
 <h2 id="decoder-only-transformers">Decoder-only Transformers</h2>
 
-For tokens $x_0,\ldots,x_m$, a causal language model factorizes
+For the tokens $x_0,\ldots,x_m$, a causal language model factorizes the probability of the sequence:
 
 $$
 \Pr_\theta(x_0,\ldots,x_m)
@@ -16,23 +22,31 @@ $$
 \prod_{i=0}^{m}\Pr_\theta(x_i\mid x_{<i})
 $$
 
-A decoder block combines masked multi-head self-attention with a feed-forward network. The causal mask prevents position $i$ from reading future tokens. Residual connections and layer normalization stabilize the deep stack; modern models often use pre-normalization so the residual path remains direct.
+The probability of the full sequence is the product of the probabilities of each token, given the tokens before it.
 
-The final hidden state at each position is projected over the vocabulary. Cross-entropy increases the probability of the observed next token. During generation, the model repeatedly selects a token, appends it, and recomputes the distribution for the next position.
+A decoder block has two parts: masked multi-head self-attention and a feed-forward network. The causal mask stops position $i$ from reading the tokens after it. Residual connections and layer normalization keep the deep stack stable. Modern models often use pre-normalization, so that the residual path stays direct.
 
-| Component | Role |
+The model projects the final hidden state at each position over the vocabulary. Cross-entropy increases the probability of the observed next token. During generation, the model does these steps again and again:
+
+1. Calculate the distribution for the next position.
+2. Select a token.
+3. Add the token to the sequence.
+
+<AutoregressiveDiagram />
+
+| Component | Function |
 | --- | --- |
-| Token and position representation | Identify content and order |
-| Causal self-attention | Mix information from the visible prefix |
-| Feed-forward network | Transform each contextual position |
-| Residual and normalization paths | Preserve signal through depth |
-| Vocabulary projection | Produce next-token logits |
+| Token and position representation | Identifies the content and the order |
+| Causal self-attention | Mixes information from the visible prefix |
+| Feed-forward network | Changes each context position |
+| Residual and normalization paths | Keep the signal through many layers |
+| Vocabulary projection | Gives the next-token logits |
 
-Model size is controlled mainly by depth, width, feed-forward size, vocabulary, and attention-head configuration. Parameter count describes capacity, not training quality: an under-trained large model can be less useful than a smaller model trained on a better compute-data balance.
+These settings control the model size: depth, width, feed-forward size, vocabulary and the configuration of the attention heads. The parameter count describes capacity, not training quality. A large model with too little training can be less useful than a smaller model. The smaller model can have a better balance between compute and data.
 
 <h2 id="training-llms">Training LLMs</h2>
 
-Pre-training minimizes negative log likelihood over a corpus $D$:
+Pre-training minimizes the negative log likelihood over a corpus $D$:
 
 $$
 \hat{\theta}
@@ -42,21 +56,48 @@ $$
 -\log\Pr_\theta(x_i\mid x_{<i})
 $$
 
-Every document supplies many prediction events. The objective is simple, but the learned representation depends on tokenization, corpus mixture, sequence length, optimizer, training schedule, numerical precision, and model architecture.
+Training finds the parameters that give the highest probability to each next token in the corpus.
 
-Training proceeds in minibatches. Backpropagation accumulates gradients through the full layer stack, and an optimizer updates billions of parameters. Checkpoints, validation loss, gradient norms, and hardware health must be monitored because a failure late in a long run is expensive.
+Each document gives many prediction events. The objective is simple. But the learned representation depends on many choices:
+
+- Tokenization.
+- The mix of data in the corpus.
+- Sequence length.
+- The optimizer and the training schedule.
+- Numerical precision.
+- Model architecture.
+
+Training uses minibatches. Backpropagation adds up gradients through the full layer stack, and an optimizer updates billions of parameters. Monitor the checkpoints, the validation loss, the gradient norms and the hardware health. A failure late in a long run is expensive.
+
+<MermaidDiagram
+  title="The LLM life cycle"
+  caption="Each stage changes the same probability model. The visible behavior of an assistant comes from all the stages together."
+  chart={`
+flowchart LR
+  D[Corpus and tokenizer] --> P[Pre-training: next-token loss]
+  P --> F[Fine-tuning: task data]
+  F --> A[Alignment: demonstrations and preferences]
+  A --> U[Use: prompt + decoding]
+  U -.->|feedback and new data| F
+`}
+/>
 
 <ScalingExplorer />
 
-Scaling improves average prediction only when the system is balanced. More parameters require enough tokens to train them; more tokens require enough capacity and compute to absorb their patterns. The next lesson makes this coordination explicit.
+Scaling makes average prediction better only when the system is balanced:
+
+- More parameters need enough tokens to train them.
+- More tokens need enough capacity and compute to learn their patterns.
+
+The next lesson shows this balance in more detail.
 
 <h2 id="fine-tuning-llms">Fine-tuning LLMs</h2>
 
-Pre-training teaches a model to continue text from the training distribution. Fine-tuning changes the distribution it should imitate.
+Pre-training teaches a model to continue text from the training distribution. Fine-tuning changes the distribution that the model must copy.
 
 ### Supervised task tuning
 
-For input $x$ and desired response $y$, conditional fine-tuning minimizes
+For an input $x$ and a desired response $y$, conditional fine-tuning minimizes this loss:
 
 $$
 \mathcal{L}_{\mathrm{SFT}}
@@ -64,49 +105,65 @@ $$
 -\sum_t\log\Pr_\theta(y_t\mid x,y_{<t})
 $$
 
-The loss is normally applied to response tokens, not the user instruction. Task datasets can teach classification as label generation, structured extraction, summarization, dialogue, or domain-specific writing.
+The loss increases the probability of each response token, given the input and the response tokens before it.
+
+Usually, the loss applies to the response tokens and not to the user instruction. Task datasets can teach these skills:
+
+- Classification as label generation.
+- Structured extraction.
+- Summarization.
+- Dialogue.
+- Writing for a specific domain.
 
 ### Parameter update choices
 
-- **Full fine-tuning** updates the whole model and offers maximum flexibility.
-- **Parameter-efficient tuning** updates adapters or low-rank parameter changes while the base weights remain fixed.
-- **Continued pre-training** uses more unlabeled domain text before instruction examples.
+- **Full fine-tuning** updates the full model. It gives the most flexibility.
+- **Parameter-efficient tuning** updates adapters or low-rank parameter changes. The base weights do not change.
+- **Continued pre-training** uses more unlabeled domain text before the instruction examples.
 
-These stages solve different problems. Continued pre-training shifts knowledge and language statistics; supervised tuning teaches an input-output policy. A domain model may need both.
+These stages solve different problems. Continued pre-training changes the knowledge and the language statistics. Supervised tuning teaches an input-output policy. A domain model can need the two stages.
 
-Fine-tuning data is much smaller and more targeted than pre-training data. Consequently, data errors and duplicated response styles have greater leverage. Strong validation should measure task quality, behavior outside the tuned domain, and signs of forgetting.
+Fine-tuning data is much smaller and more specific than pre-training data. Thus, data errors and repeated response styles have a larger effect. Good validation must measure three things:
+
+- Task quality.
+- Behavior outside the tuned domain.
+- Signs of forgetting.
 
 <h2 id="aligning-llms">Aligning LLMs</h2>
 
-Maximum likelihood rewards resemblance to text, not necessarily helpfulness, truthfulness, harmlessness, or instruction compliance. Alignment introduces human behavioral signals after a capable initial model exists.
+Maximum likelihood rewards text that looks like the training text. It does not always reward helpful, true or harmless answers, or answers that follow instructions. Alignment adds human behavior signals after a capable initial model exists.
 
-A common pipeline is:
+This is a usual pipeline:
 
-1. **Supervised fine-tuning:** imitate curated instruction-response demonstrations.
-2. **Preference collection:** compare candidate responses for the same prompt.
-3. **Preference optimization:** train a reward model plus reinforcement learning, or use a direct objective such as DPO.
+1. **Supervised fine-tuning:** Copy selected instruction-response demonstrations.
+2. **Preference collection:** Compare candidate responses for the same prompt.
+3. **Preference optimization:** Train a reward model and use reinforcement learning. Or use a direct objective, for example DPO.
 
-Alignment moves the policy toward preferred responses while a reference constraint limits destructive drift from the original language model. The target remains empirical: preferences depend on annotator guidance, cultural assumptions, task context, and the quality of candidate responses.
+Alignment moves the policy toward the preferred responses. A reference limit stops the policy from moving too far from the original language model. The target is still empirical. Preferences depend on the annotator guidance, cultural assumptions, the task context and the quality of the candidate responses.
 
 <Callout title="Architecture is not behavior">
-  <p>Two systems can share the same decoder architecture and parameter count yet behave differently because their corpora, instruction data, preference data, system prompts, and decoding rules differ.</p>
+  <p>Two systems can have the same decoder architecture and the same parameter count, but behave differently. Their corpora, instruction data, preference data, system prompts and decoding rules can be different.</p>
 </Callout>
 
 <h2 id="prompting-llms">Prompting LLMs</h2>
 
-Prompting changes the conditional context without updating parameters. The prompt can contain:
+Prompting changes the conditional context. It does not update the parameters. The prompt can contain these parts:
 
-- an instruction defining the action,
-- evidence or background facts,
-- demonstrations of the desired mapping,
-- conversation history,
-- an output schema or stopping condition.
+- An instruction that defines the action.
+- Evidence or background facts.
+- Demonstrations of the desired mapping.
+- Conversation history.
+- An output schema or a stop condition.
 
-Zero-shot prompts provide instructions only. Few-shot prompts add demonstrations, allowing **in-context learning**: the model infers a temporary task pattern from its input. Reasoning prompts can ask for intermediate computation, while retrieval and tool calls can supply information or operations not stored reliably in the model.
+Zero-shot prompts give only instructions. Few-shot prompts add demonstrations. This allows **in-context learning**: the model finds a temporary task pattern from its input. Reasoning prompts can ask for intermediate calculation. Retrieval and tool calls can give information or operations that the model does not store reliably.
 
-Generation then depends on a decoding policy. Greedy decoding selects the largest probability; sampling introduces controlled diversity; search or verification can compare multiple candidates.
+Then, generation depends on a decoding policy:
 
-The resulting assistant is therefore a system:
+- Greedy decoding selects the token with the largest probability.
+- Sampling adds controlled diversity.
+- Search or verification can compare more than one candidate.
+
+Thus, the assistant is a system:
 
 $$
 \text{model}
@@ -120,6 +177,8 @@ $$
 \text{policy controls}
 $$
 
-Each term can change the observed answer. Debugging an LLM application requires identifying which layer supplied the incorrect assumption rather than attributing every failure to “the model.”
+The assistant output comes from five parts together, not from the model alone.
+
+Each part can change the observed answer. When you debug an LLM application, find which part gave the wrong assumption. Do not always say that "the model" caused the failure.
 
 <SourceNote pages="37–55" />

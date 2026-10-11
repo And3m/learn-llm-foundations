@@ -1,4 +1,9 @@
-Chapter 2 follows a simple next-token objective into a complete LLM development system. Architecture defines the generator; data and compute determine what it learns; tuning and alignment shape its policy; memory and positional methods determine how much context it can use.
+Chapter 2 follows a simple next-token objective into a full LLM development system. Each part has one function:
+
+- The architecture defines the generator.
+- Data and compute decide what the generator learns.
+- Tuning and alignment shape its policy.
+- Memory and position methods decide how much context it can use.
 
 <h2 id="mental-model">The LLM lifecycle</h2>
 
@@ -12,35 +17,75 @@ $$
 \text{response}
 $$
 
-Every stage has a separate failure mode. Poor data cannot be repaired by parameter count alone. A low-loss base model may not follow instructions. An aligned model can still be prompted with missing evidence. A capable policy can still be served with excessive latency.
+Selected tokens become a base LLM through pre-training. Tuning and alignment make it a usable policy. A prompt and a decoder then make a response.
+
+Each stage has a different failure mode:
+
+- A larger parameter count cannot repair bad data.
+- A base model with a low loss can still fail to follow instructions.
+- An aligned model can still get a prompt with missing evidence.
+- A capable policy can still have too much latency when it serves requests.
+
+<MermaidDiagram
+  title="Chapter 2 concept map"
+  caption="The main ideas of Chapter 2 and how they connect."
+  chart={`
+mindmap
+  root((Generative LLMs))
+    Decoder-only model
+      Causal attention
+      Next-token loss
+    Training at scale
+      Data pipeline
+      Parallelism
+      Scaling laws
+    After pre-training
+      Fine-tuning
+      Alignment
+      Prompting
+    Long context
+      Efficient attention
+      KV cache and memory
+      Position extension
+`}
+/>
 
 <h2 id="scaling-balance">Scaling balance</h2>
 
-| Resource | Too little | More is not automatically better because |
+| Resource | Result when there is too little | Why more is not always better |
 | --- | --- | --- |
-| Parameters | Insufficient capacity | Memory and serving cost grow |
-| Tokens | Under-trained model | Low-quality repetitions waste compute |
-| Compute | Incomplete optimization | Cost and failure exposure rise |
-| Communication bandwidth | Idle accelerators | More devices can increase synchronization |
+| Parameters | Not enough capacity | Memory and serving cost increase |
+| Tokens | The model has too little training | Repeated low-quality data uses compute for no benefit |
+| Compute | The optimization does not finish | Cost and the risk of failure increase |
+| Communication bandwidth | Accelerators wait with no work | More devices can need more synchronization |
 
-Scaling laws forecast average trends inside a known regime. Compute-optimal design grows model and data together, then adjusts for deployment economics.
+Scaling laws forecast average trends inside a known range. A compute-optimal design increases the model and the data together. Then it adjusts for the cost of deployment.
 
 <h2 id="long-context-map">Long-context map</h2>
 
-Long sequences introduce three distinct levers:
+Long sequences give you three different controls:
 
-- **Compute:** optimized kernels, sparse patterns, or approximate attention.
-- **Memory:** KV caching, KV-head sharing, compression, recurrence, or retrieval.
-- **Position:** relative bias, rotary representations, extrapolation, or interpolation.
+- **Compute:** Optimized kernels, sparse patterns or approximate attention.
+- **Memory:** KV caching, KV-head sharing, compression, recurrence or retrieval.
+- **Position:** Relative bias, rotary representations, extrapolation or interpolation.
 
-These levers interact. GQA reduces cache memory but does not remove attention over the prefix. Position interpolation extends coordinates but does not prove retrieval quality. External retrieval reduces context length but introduces ranking errors.
+These controls have effects on each other:
+
+- GQA decreases cache memory. But the model still attends over the full prefix.
+- Position interpolation extends the coordinates. But it does not prove retrieval quality.
+- External retrieval decreases the context length. But it adds ranking errors.
 
 <Callout title="Design test">
-  <p>For every long-context technique, state which resource it saves, which interactions it removes or approximates, and how quality will be measured across the window.</p>
+  <p>For each long-context method, state three things:</p>
+  <ul>
+    <li>Which resource it saves.</li>
+    <li>Which interactions it removes or approximates.</li>
+    <li>How you will measure quality across the window.</li>
+  </ul>
 </Callout>
 
 <h2 id="next">What comes next</h2>
 
-Once a generative model exists, users still need a way to describe temporary tasks and provide request-specific evidence. [Chapter 3](/chapters/prompting) treats the prompt as a structured program containing instructions, examples, context, reasoning strategy, and tool access.
+When a generative model exists, users still need a method to describe temporary tasks and to give evidence for each request. [Chapter 3](/chapters/prompting) shows the prompt as a structured program. The program contains instructions, examples, context, a reasoning strategy and tool access.
 
 <SourceNote pages="94" />
