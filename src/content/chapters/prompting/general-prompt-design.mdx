@@ -1,64 +1,127 @@
 import { PromptBuilder } from "@/components/simulators/prompt-builder"
+import { FewShotDiagram } from "@/components/diagrams/prompting"
 
-Prompting controls a language model through its input rather than by changing its parameters. The objective is not to discover a magic phrase. It is to turn an intended task into evidence and constraints that make the desired output more likely, easier to evaluate, and safer to use.
+Prompting controls a language model through its input. It does not change the model parameters. The objective is not to find a special phrase. The objective is to change the task into evidence and limits that make the desired output:
+
+- More probable.
+- Easier to evaluate.
+- Safer to use.
 
 <Callout title="Learning objectives">
   <ul>
-    <li>Separate instructions, context, examples, and output requirements.</li>
-    <li>Choose appropriately between zero-shot and few-shot prompting.</li>
-    <li>Use prompt patterns that reduce ambiguity without adding irrelevant text.</li>
-    <li>Adapt the same principles to classification, extraction, generation, and transformation tasks.</li>
+    <li>Separate instructions, context, examples and output requirements.</li>
+    <li>Select correctly between zero-shot prompting and few-shot prompting.</li>
+    <li>Use prompt patterns that decrease ambiguity and do not add unrelated text.</li>
+    <li>Use the same principles for classification, extraction, generation and transformation tasks.</li>
   </ul>
 </Callout>
 
 <h2 id="prompt-basics">Prompt basics</h2>
 
-For a language model, the prompt is the conditioning input $x$ in a distribution such as $P(y \mid x)$. Small changes to $x$ can alter which continuation $y$ is probable because the model must infer the task, the relevant evidence, and the expected form of the answer from the tokens it receives.
+For a language model, the prompt is the conditioning input $x$ in a distribution, for example $P(y \mid x)$. This is the probability of an output $y$ when the input is $x$.
 
-A practical prompt usually contains four distinguishable parts:
+Small changes to $x$ can change which continuation $y$ is probable. The reason is that the model must find three things from the tokens that it gets:
 
-1. **Instruction:** the operation to perform and the success criteria.
-2. **Context:** facts or source material the response should use.
-3. **Examples:** demonstrations of valid input-output behavior.
-4. **Output contract:** the required structure, length, tone, or schema.
+- The task.
+- The related evidence.
+- The expected form of the answer.
 
-Headings, delimiters, and structured fields make these roles visible. This is especially important when the context contains prose that could be mistaken for an instruction. State how missing evidence should be handled and avoid vague verbs such as “analyze” when a checkable action such as “compare three differences” is available.
+A practical prompt usually contains four different parts:
 
-Prompting changes likelihoods, not guarantees. A clear request can still produce a false answer, and a formatting rule can still be violated. Production systems therefore combine prompt design with validation, grounding, and recovery behavior.
+1. **Instruction:** The operation to do and the success criteria.
+2. **Context:** The facts or the source material that the response must use.
+3. **Examples:** Demonstrations of valid input-output behavior.
+4. **Output contract:** The necessary structure, length, tone or schema.
+
+<MermaidDiagram
+  title="The parts of a prompt"
+  caption="A prompt is a composition of four parts. Each part removes a different uncertainty about the task."
+  chart={`
+classDiagram
+  class Prompt
+  class Instruction {
+    operation
+    success criteria
+  }
+  class Context {
+    facts
+    source material
+    rule for missing evidence
+  }
+  class Examples {
+    input-output pairs
+    edge cases
+  }
+  class OutputContract {
+    structure or schema
+    length and tone
+  }
+  Prompt *-- Instruction
+  Prompt *-- Context
+  Prompt o-- Examples
+  Prompt *-- OutputContract
+`}
+/>
+
+Headings, delimiters and structured fields make these parts easy to see. This is necessary when the context contains text that the model can think is an instruction. State what the model must do when evidence is missing. Do not use vague verbs, for example "analyze". Use an action that you can check, for example "compare three differences".
+
+Prompting changes probabilities. It does not give guarantees. A clear request can still give a false answer, and the model can still break a format rule. Thus, production systems use prompt design together with validation, grounding and recovery behavior.
 
 <PromptBuilder />
 
 <h2 id="in-context-learning">In-context learning</h2>
 
-In-context learning gives the model task information inside the prompt while leaving its parameters unchanged. A **zero-shot** prompt provides an instruction only, a **one-shot** prompt provides one demonstration, and a **few-shot** prompt provides several.
+In-context learning gives the model task information inside the prompt. The model parameters do not change.
 
-Demonstrations can define a label space, reveal an output format, or communicate a boundary that is difficult to describe. They should be correct, representative, and internally consistent. A demonstration with the wrong label is not harmless context; it is evidence for the wrong mapping.
+- A **zero-shot** prompt gives only an instruction.
+- A **one-shot** prompt gives one demonstration.
+- A **few-shot** prompt gives some demonstrations.
 
-Example selection matters as much as example count. Include cases that distinguish easily confused categories and reflect real input variation. Watch for order effects, class imbalance, accidental similarity to the test item, and examples so long that they displace the evidence needed for the actual request.
+<FewShotDiagram />
 
-Use a held-out evaluation set when comparing zero-shot and few-shot designs. An example set that improves one memorable case may reduce performance across the task distribution.
+Demonstrations can define a set of labels, show an output format, or show a boundary that is difficult to describe. Each demonstration must be correct, typical and consistent with the others. A demonstration with the wrong label is not harmless. It is evidence for the wrong mapping.
+
+The selection of examples is as important as their number. Include cases that separate categories that are easy to confuse. Include the variation that occurs in real inputs. Look for these problems:
+
+- Order effects.
+- Class imbalance.
+- Accidental similarity to the test item.
+- Examples that are so long that they push out the evidence for the real request.
+
+Use a held-out evaluation set when you compare zero-shot and few-shot designs. A set of examples that makes one memorable case better can make the full task worse.
 
 <h2 id="prompt-strategies">Prompt strategies</h2>
 
-Several reusable strategies make prompts easier for a model and an application to interpret:
+These strategies make prompts easier for the model and for the application to interpret:
 
-| Strategy | What it clarifies | Typical risk |
+| Strategy | What it makes clear | Usual risk |
 | --- | --- | --- |
-| Direct instruction | The action and scope | Omits edge-case behavior |
-| Role or perspective | Relevant expertise and voice | Adds style without factual grounding |
+| Direct instruction | The action and the scope | It does not describe edge-case behavior |
+| Role or perspective | The related expertise and voice | It adds style without factual grounding |
 | Delimited context | Which text is data | Untrusted text can still contain attacks |
-| Output schema | How the result will be consumed | Model may emit invalid structure |
+| Output schema | How the application uses the result | The model can give an invalid structure |
 | Constraints | Length, audience, exclusions | Too many rules can conflict |
-| Stepwise request | Intermediate operations | More tokens do not ensure correct reasoning |
+| Stepwise request | The intermediate operations | More tokens do not make the reasoning correct |
 
-Put high-priority instructions where they are easy to find, name the authoritative source, and distinguish required rules from preferences. For machine-readable output, validate the result rather than trusting a prompt to enforce syntax. Test paraphrases, missing fields, conflicting context, and adversarial input in addition to the happy path.
+Do these steps:
+
+1. Put high-priority instructions where they are easy to find.
+2. Name the source that has authority.
+3. Show which rules are necessary and which are only preferences.
+4. For machine-readable output, validate the result. Do not trust a prompt to enforce the syntax.
+5. Test paraphrases, missing fields, conflicting context and hostile input, not only the normal case.
 
 <h2 id="task-examples">Task examples</h2>
 
-The same structure can be adapted to common language tasks. For classification, define every label and require exactly one valid label. For information extraction, provide the schema, field types, and a rule for absent values. For summarization, identify the audience, length budget, and facts that must be preserved. For rewriting or translation, separate content that must remain invariant from properties such as style or language that should change.
+You can use the same structure for usual language tasks:
 
-Open-ended generation needs an evaluation target too. Specify the intended reader, purpose, factual sources, and unacceptable claims. A useful prompt for a current or private question should include retrieved evidence or a tool path rather than asking the model to rely on memory.
+- **Classification:** Define each label. Ask for exactly one valid label.
+- **Information extraction:** Give the schema, the field types and a rule for missing values.
+- **Summarization:** Identify the audience, the length limit and the facts that the summary must keep.
+- **Rewriting or translation:** Separate the content that must not change from the properties that must change, for example style or language.
 
-The general rule is economical: every prompt component should resolve a real uncertainty about the task. Extra instructions, personas, or examples that do not affect the decision add cost and can hide the important signal.
+Open-ended generation also needs an evaluation target. Specify the reader, the purpose, the factual sources and the claims that are not acceptable. For a current or private question, the prompt must include retrieved evidence or a path to a tool. Do not ask the model to use only its memory.
+
+The general rule is economy. Each part of the prompt must remove a real uncertainty about the task. Instructions, personas or examples that do not change the decision add cost. They can also hide the necessary signal.
 
 <SourceNote pages="97-114" />

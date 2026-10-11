@@ -1,4 +1,10 @@
-Prompting shapes a model’s behavior by constructing its input. It can define the task, demonstrate a mapping, supply evidence, allocate inference-time computation, or expose tools without updating the base model.
+Prompting changes the behavior of a model through its input. A prompt can do these things without an update to the base model:
+
+- Define the task.
+- Show a mapping.
+- Give evidence.
+- Give more compute at inference time.
+- Give access to tools.
 
 <h2 id="mental-model">The chapter in one mental model</h2>
 
@@ -7,30 +13,71 @@ $$
 \longrightarrow P(\text{response} \mid \text{prompt})
 $$
 
-Each addition should resolve a concrete uncertainty: what to do, what facts to use, what a valid answer looks like, or where missing information can be obtained.
+All the parts of the prompt together set the probability of each possible response.
+
+Each part that you add must remove a real uncertainty. It must answer one of these questions:
+
+- What must the model do?
+- Which facts must it use?
+- What does a valid answer look like?
+- Where can the model get missing information?
+
+<MermaidDiagram
+  title="Chapter 3 concept map"
+  caption="The main ideas of Chapter 3 and how they connect."
+  chart={`
+mindmap
+  root((Prompting))
+    Prompt design
+      Instruction
+      Context
+      Examples
+      Output contract
+    More inference work
+      Chain of thought
+      Decomposition
+      Self-refinement
+      Ensembling
+    Outside the model
+      Retrieval RAG
+      Tools
+    Learned prompts
+      Optimization search
+      Soft prompts
+      Compression
+`}
+/>
 
 <h2 id="method-guide">Method guide</h2>
 
 | Need | Start with |
 | --- | --- |
-| Clear task and format | Direct instruction plus output contract |
-| Subtle label or mapping | Representative few-shot examples |
-| Multi-step problem | Explicit decomposition |
+| A clear task and format | A direct instruction and an output contract |
+| A difficult label or mapping | Typical few-shot examples |
+| A problem with many steps | Explicit decomposition |
 | Better candidate quality | Refinement or diverse sampling |
 | Current or private facts | Retrieval with grounded citations |
-| Exact computation or action | A validated, permissioned tool |
-| Task specialization with few parameters | Soft prompts or another parameter-efficient method |
+| An exact calculation or action | A validated tool with limited permissions |
+| Task specialization with few parameters | Soft prompts or a different parameter-efficient method |
 
-Choose the lightest method that satisfies the requirement. Every extra call, sample, and context token has a latency and cost consequence.
+Select the lightest method that satisfies the requirement. Each extra call, sample and context token adds latency and cost.
 
 <h2 id="evaluation-guide">Evaluation guide</h2>
 
-Evaluate prompts on representative held-out cases, including missing evidence, ambiguous instructions, long inputs, adversarial text, and format failures. Measure task quality together with token use, latency, parse validity, citation support, and tool safety. Re-run the suite when the model, retrieval index, or prompt template changes.
+Evaluate prompts on typical held-out cases. Include these cases:
 
-Prompting steers rather than guarantees. Keep deterministic validation and permission checks outside the model wherever the application can enforce them directly.
+- Missing evidence.
+- Ambiguous instructions.
+- Long inputs.
+- Hostile text.
+- Format failures.
+
+Measure the task quality together with token use, latency, parse validity, citation support and tool safety. Run the tests again when the model, the retrieval index or the prompt template changes.
+
+Prompting guides the model. It does not give guarantees. When the application can enforce a rule directly, keep the validation and the permission checks outside the model.
 
 <h2 id="next">What comes next</h2>
 
-Prompts control behavior per request. [Chapter 4](/chapters/alignment) examines how desired behavior can be learned more persistently from demonstrations, reward signals, and preferences.
+Prompts control behavior for one request at a time. [Chapter 4](/chapters/alignment) shows how a model can learn the desired behavior permanently. It learns from demonstrations, reward signals and preferences.
 
 <SourceNote pages="153" />
