@@ -40,7 +40,8 @@ These labs run entirely in the browser. No API key, model provider, database, or
 ## Features
 
 - 22 statically generated lessons across five complete chapters
-- Detailed MDX explanations with equations, tables, callouts, and practical tradeoffs
+- Lesson text written in Simplified Technical English (ASD-STE100 style: short sentences, active voice, one meaning per word), with equations, tables, callouts, and practical tradeoffs
+- UML-style Mermaid diagrams (flowcharts, sequence, class, state, and mind maps) and step-by-step animated SVG diagrams in every chapter
 - Eight accessible interactive concept labs
 - Searchable, alphabetized glossary with 57 linked definitions
 - Section-level source-page navigation and downloadable source PDF
@@ -57,6 +58,7 @@ These labs run entirely in the browser. No API key, model provider, database, or
 - [React](https://react.dev/) and TypeScript
 - [MDX](https://mdxjs.com/) for lesson content
 - [KaTeX](https://katex.org/) for mathematical notation
+- [Mermaid](https://mermaid.js.org/) for UML-style diagrams, plus hand-built animated SVG diagrams
 - [Lucide](https://lucide.dev/) for interface icons
 - [Vitest](https://vitest.dev/) and Testing Library
 - GitHub Actions for continuous integration

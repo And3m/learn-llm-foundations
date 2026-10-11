@@ -1,4 +1,8 @@
-Inference turns a trained model into a responsive service. Prefilling processes the prompt, decoding emits tokens sequentially, and the serving system manages cached state, request batches, parallel devices, and optional quality-enhancing computation.
+Inference changes a trained model into a service that responds to requests:
+
+- Prefilling processes the prompt.
+- Decoding gives tokens one after the other.
+- The serving system manages the cached state, the request batches, the parallel devices and optional compute that makes the quality better.
 
 <h2 id="mental-model">The chapter in one mental model</h2>
 
@@ -7,30 +11,72 @@ $$
 \xrightarrow{\text{decode + schedule}} \text{response}
 $$
 
-Prefill benefits from large parallel computation. Decode repeatedly reads cached state and must respect token dependencies. Prompt length, output length, and concurrent traffic therefore stress different parts of the system.
+Prefill changes the request into a KV state. Decoding and scheduling then change the KV state into a response.
+
+Prefill gets a benefit from large parallel calculation. Decode reads the cached state again and again, and it must follow the token dependencies. Thus, the prompt length, the output length and the concurrent traffic put stress on different parts of the system.
+
+<MermaidDiagram
+  title="Chapter 5 concept map"
+  caption="The main ideas of Chapter 5 and how they connect."
+  chart={`
+mindmap
+  root((Inference))
+    Two phases
+      Prefill
+      Decode
+    Decoding rules
+      Greedy and beam
+      Temperature
+      Top-k and top-p
+    Efficient serving
+      KV and prefix cache
+      Continuous batching
+      Parallelism
+      Speculative decoding
+    More compute per request
+      Context
+      Search
+      Ensembles
+      Verified paths
+`}
+/>
 
 <h2 id="metrics-guide">Metrics guide</h2>
 
-Use TTFT for initial responsiveness, ITL for streaming smoothness, end-to-end latency for completion time, and throughput for capacity. Goodput adds a service target and counts only work completed within it. Pair systems metrics with task quality because a fast response that fails the task is not useful efficiency.
+Use each metric for one purpose:
 
-Measure medians and tail percentiles under representative arrival rates and sequence lengths. An unloaded single-request benchmark does not predict online serving behavior.
+- **TTFT:** The first response speed.
+- **ITL:** The smoothness of the stream.
+- **End-to-end latency:** The time to completion.
+- **Throughput:** The capacity.
+- **Goodput:** The work that the system completes inside a service target.
 
-<h2 id="tradeoffs">Core tradeoffs</h2>
+Use systems metrics together with task quality. A fast response that fails the task is not useful efficiency.
 
-| Technique | Primary benefit | Main cost |
+Measure medians and tail percentiles with realistic arrival rates and sequence lengths. A benchmark with one request and no load does not predict the behavior of online serving.
+
+<h2 id="tradeoffs">Technique trade-offs</h2>
+
+| Technique | Main benefit | Main cost |
 | --- | --- | --- |
-| KV caching | Avoid repeated attention computation | Memory grows with active context |
-| Continuous batching | Higher utilization and throughput | Scheduling and latency pressure |
-| Model parallelism | Fit or accelerate large models | Communication overhead |
-| Speculative decoding | Fewer sequential target steps | Draft and verification work |
-| Inference-time search | Better chance of a verified answer | More tokens and evaluator calls |
+| KV caching | No repeated attention calculation | Memory increases with the active context |
+| Continuous batching | Higher utilization and throughput | Scheduling work and latency pressure |
+| Model parallelism | Large models fit or run faster | Communication overhead |
+| Speculative decoding | Fewer sequential target steps | Draft work and verification work |
+| Inference-time search | Better chance of a verified answer | More tokens and more evaluator calls |
 
-Optimize for the metric the workload actually values; these quantities can move in different directions.
+Optimize for the metric that the workload really needs. These values can move in different directions.
 
 <h2 id="continue">Continue learning</h2>
 
-The five chapters form one lifecycle: [pre-training](/chapters/pre-training) learns reusable structure, [generative modeling](/chapters/generative-models) scales it, [prompting](/chapters/prompting) supplies task context, [alignment](/chapters/alignment) shapes behavior, and inference delivers the result.
+The five chapters make one life cycle:
 
-Use the [glossary](/glossary) as a cross-chapter reference or return to any lab to explore a tradeoff directly.
+1. [Pre-training](/chapters/pre-training) learns structure that many tasks can use.
+2. [Generative modeling](/chapters/generative-models) scales this structure.
+3. [Prompting](/chapters/prompting) gives the task context.
+4. [Alignment](/chapters/alignment) shapes the behavior.
+5. Inference delivers the result.
+
+Use the [glossary](/glossary) as a reference for all the chapters. Or go back to a lab to examine a trade-off directly.
 
 <SourceNote pages="245-246" />

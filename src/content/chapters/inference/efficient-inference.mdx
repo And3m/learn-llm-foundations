@@ -1,31 +1,87 @@
-Efficient serving avoids repeated computation, keeps accelerators supplied with useful work, and distributes models or traffic when one device is insufficient. The best design follows the workload rather than a single benchmark number.
+import { KvCacheDiagram, ContinuousBatchingDiagram } from "@/components/diagrams/inference"
 
-<h2 id="more-caching">More caching</h2>
+Efficient serving does three things:
 
-Autoregressive attention reuses all earlier keys and values. A key-value (KV) cache stores those layer-by-layer tensors so each decode step computes only the state for the newest token. Without it, the model would recompute the full prefix after every generated token.
+- It does not repeat calculations.
+- It keeps the accelerators busy with useful work.
+- It distributes the model or the traffic when one device is not sufficient.
 
-The cache trades arithmetic for memory. Its size grows with sequence length, layer count, precision, batch size, and the number of KV heads. Multi-query and grouped-query attention reduce the footprint by sharing keys and values across query heads. Paged or blocked allocation reduces fragmentation when request lengths vary.
+The best design follows the workload. It does not follow one benchmark number.
 
-Prefix caching reuses KV state across requests with an identical system prompt or document prefix. Reuse requires exact cache-compatible tokens and careful invalidation when the model, adapters, or prompt changes. Eviction and admission policies determine whether cache memory is spent on frequently reused prefixes or active generations.
+<h2 id="more-caching">Prefix and KV caching</h2>
+
+Token-by-token attention uses all the earlier keys and values again. A key-value (KV) cache stores these tensors for each layer. Thus, each decode step calculates only the state of the newest token. Without the cache, the model must calculate the full prefix again after each generated token.
+
+<KvCacheDiagram />
+
+The cache uses memory to save arithmetic. Its size increases with these values:
+
+- The sequence length.
+- The number of layers.
+- The precision.
+- The batch size.
+- The number of KV heads.
+
+Multi-query attention and grouped-query attention decrease the memory, because query heads share keys and values. Paged or blocked allocation decreases fragmentation when requests have different lengths.
+
+Prefix caching uses the same KV state for requests that start with the same system prompt or document prefix. This needs exactly the same tokens. You must also clear the cache carefully when the model, the adapters or the prompt changes. Eviction and admission policies decide where the cache memory goes: to prefixes that many requests use, or to active generations.
 
 <h2 id="batching">Batching</h2>
 
-Batching combines requests so matrix multiplications are large enough to use accelerator capacity. A static batch begins and ends together, wasting slots when sequences have different lengths. Padding also spends compute on positions that do not contain useful tokens.
+Batching combines requests, so that the matrix multiplications are large enough to use the accelerator capacity. A static batch starts and ends together. Thus, it wastes slots when the sequences have different lengths. Padding also uses compute on positions that do not contain useful tokens.
 
-Continuous or iteration-level batching updates the batch between decode steps: completed requests leave and waiting requests enter. This raises utilization under online traffic, but the scheduler must balance prefill work, decode latency, queueing, and available KV memory.
+**Continuous batching** (also called iteration-level batching) updates the batch between decode steps:
 
-Larger batches generally increase throughput while increasing queue delay and cache pressure. Chunked prefilling can split a very long prompt so it does not block many short decode steps. Service tiers, deadlines, and prompt/output length estimates can inform priority without starving large requests.
+- Completed requests leave the batch.
+- Waiting requests go into the batch.
+
+<ContinuousBatchingDiagram />
+
+This increases utilization for online traffic. But the scheduler must balance the prefill work, the decode latency, the queue and the available KV memory.
+
+<MermaidDiagram
+  title="The life cycle of a request in a continuous-batching server"
+  caption="A request can wait for KV memory, and the scheduler can pause it if memory is low. It leaves the batch at once when it finishes, so a new request can use its slot."
+  chart={`
+stateDiagram-v2
+  [*] --> Queued: request arrives
+  Queued --> Prefill: KV memory available
+  Prefill --> Decoding: first token sent
+  Decoding --> Decoding: one token per step
+  Decoding --> Preempted: KV memory is low
+  Preempted --> Queued: wait for memory
+  Decoding --> Finished: stop token or limit
+  Finished --> [*]: slot and KV blocks released
+`}
+/>
+
+Larger batches usually increase throughput. But they also increase the queue delay and the cache pressure. Chunked prefilling can divide a very long prompt into parts, so that it does not block many short decode steps. Service tiers, deadlines and estimates of the prompt and output lengths can help set the priority. Large requests must still get service.
 
 <h2 id="parallelism">Parallelism</h2>
 
-When a model does not fit or one device cannot meet demand, inference uses several forms of parallelism. **Tensor parallelism** splits operations within a layer, **pipeline parallelism** places groups of layers on different devices, and **data parallelism** replicates the model to serve independent traffic. Each introduces communication, synchronization, or idle-stage overhead.
+When a model does not fit on one device, or one device cannot meet the demand, inference uses parallelism:
 
-Speculative decoding addresses sequential latency differently. A smaller draft model proposes several tokens, and the target model verifies them in a parallel pass. Accepted tokens advance generation by multiple positions while preserving the target distribution under the appropriate acceptance rule. Speedup depends on draft accuracy and the relative cost of drafting and verification.
+- **Tensor parallelism** divides the operations inside a layer.
+- **Pipeline parallelism** puts groups of layers on different devices.
+- **Data parallelism** puts a copy of the model on each device to serve independent traffic.
 
-<h2 id="serving-remarks">Serving remarks</h2>
+Each one adds communication, synchronization or time when stages wait.
 
-Quantization, optimized kernels, model architecture, cache policy, batching, and parallel placement interact. A technique that helps one phase can harm another: a larger batch raises throughput but may violate TTFT, and aggressive quantization saves bandwidth but can reduce task quality.
+Speculative decoding decreases sequential latency in a different way:
 
-Profile real prompt lengths, output lengths, arrival patterns, hardware topology, and latency targets. Compare quality at the same serving cost, and use goodput under a service-level objective when raw throughput hides late responses.
+1. A smaller draft model proposes some tokens.
+2. The target model checks them in one parallel pass.
+3. The accepted tokens move generation forward by more than one position.
+
+With the correct acceptance rule, the output keeps the distribution of the target model. The speedup depends on how accurate the draft is, and on the cost of drafting compared with verification.
+
+<h2 id="serving-remarks">Practical remarks</h2>
+
+Quantization, optimized kernels, model architecture, cache policy, batching and parallel placement all have effects on each other. A method that helps one phase can make a different phase worse:
+
+- A larger batch increases throughput, but it can break the TTFT target.
+- Strong quantization saves bandwidth, but it can decrease task quality.
+
+Profile the real prompt lengths, output lengths, arrival patterns, hardware topology and latency targets. Compare quality at the same serving cost. When raw throughput hides late responses, use goodput against a service-level objective.
 
 <SourceNote pages="222-233" />
