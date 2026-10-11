@@ -88,7 +88,7 @@ An external memory separates storage from the context window. The retrieval cost
   title="Ways to manage long-context memory"
   caption="Each method keeps a different part of the history. Each one also loses something, so measure what the task needs."
   chart={`
-flowchart TB
+flowchart LR
   H[Token history] --> W[Sliding window: keep recent tokens]
   H --> S[Compressed summary: merge old KV pairs]
   H --> R[Recurrent memory: carry chunk states]

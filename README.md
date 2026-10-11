@@ -122,6 +122,7 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run build` | Create the optimized production build |
 | `npm run check` | Run lint, type checking, tests, and the production build |
+| `npm run check:ui -- --base <url>` | Check 10 device sizes in light and dark: no sideways scroll, text at least 12px, readable diagram labels, 24px tap targets, aligned rows, no console errors (needs Chrome or Edge and a running site; add `--shots <dir>` for screenshots) |
 
 ## Verification
 

@@ -142,7 +142,7 @@ BERT adds the token, position and segment vectors to get the input vector at pos
   title="How BERT builds each input vector"
   caption="Three embeddings are added for each token. The sum goes through L encoder layers. The result is one context vector for each position."
   chart={`
-flowchart LR
+flowchart TB
   T["Token embedding<br/>(which WordPiece)"] --> S((+))
   P["Position embedding<br/>(where in the sequence)"] --> S
   G["Segment embedding<br/>(sentence A or B)"] --> S

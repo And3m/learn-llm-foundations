@@ -132,7 +132,7 @@ Training minimizes a regression loss, for example the squared error. The main de
   title="Which BERT output each task head reads"
   caption="Sentence-level tasks read the CLS vector. Token-level tasks read the vector of each token. Span tasks score each passage token as a start or an end."
   chart={`
-flowchart TB
+flowchart LR
   B["BERT encoder"] --> CLS["h_CLS"]
   B --> TOK["h_1 ... h_m"]
   CLS --> C1["Softmax head → label"]

@@ -46,13 +46,13 @@ Direct preference optimization (DPO) trains a policy directly on chosen and reje
   chart={`
 flowchart TB
   subgraph RLHF
-    direction LR
+    direction TB
     P1[Preference pairs] --> RM[Train reward model]
     RM --> L[Online loop: sample, score, PPO update]
     L --> A1[Aligned policy]
   end
   subgraph DPO
-    direction LR
+    direction TB
     P2[Preference pairs] --> D[One supervised loss on chosen vs rejected log-probabilities]
     D --> A2[Aligned policy]
   end

@@ -73,7 +73,7 @@ Training uses minibatches. Backpropagation adds up gradients through the full la
   title="The LLM life cycle"
   caption="Each stage changes the same probability model. The visible behavior of an assistant comes from all the stages together."
   chart={`
-flowchart LR
+flowchart TB
   D[Corpus and tokenizer] --> P[Pre-training: next-token loss]
   P --> F[Fine-tuning: task data]
   F --> A[Alignment: demonstrations and preferences]

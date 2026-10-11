@@ -118,7 +118,7 @@ Power laws are useful because small runs can forecast larger runs inside the obs
   title="What a scaling law connects"
   caption="For a fixed compute budget, select the model size and the token count together. The expected serving volume can move the best choice toward a smaller model with more tokens."
   chart={`
-flowchart LR
+flowchart TB
   C[Compute budget C] --> N[Parameters N]
   C --> D[Training tokens D]
   N --> L[Validation loss]

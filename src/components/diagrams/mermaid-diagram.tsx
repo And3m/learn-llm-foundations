@@ -13,6 +13,12 @@ type MermaidDiagramProps = {
 
 const token = (styles: CSSStyleDeclaration, name: string) => styles.getPropertyValue(name).trim();
 
+/** The width of the chart in its own units, from the SVG viewBox. Small screens use it as a minimum width. */
+const naturalWidth = (svg: string) => {
+  const width = Number(/viewBox="[\d.-]+ [\d.-]+ ([\d.]+)/.exec(svg)?.[1]);
+  return Number.isFinite(width) && width > 0 ? `${Math.round(width)}px` : undefined;
+};
+
 let configuredTheme: string | null = null;
 
 /** Loads Mermaid one time and configures it again only when the site theme changes. */
@@ -95,7 +101,7 @@ export function MermaidDiagram({ title, caption, chart }: MermaidDiagramProps) {
         <strong>{title}</strong>
       </figcaption>
       {svg && !failed ? (
-        <div className="diagram__canvas diagram__mermaid" role="img" aria-label={title} dangerouslySetInnerHTML={{ __html: svg }} />
+        <div className="diagram__canvas diagram__mermaid" role="img" aria-label={title} style={{ "--mermaid-width": naturalWidth(svg) } as React.CSSProperties} dangerouslySetInnerHTML={{ __html: svg }} />
       ) : (
         <pre className="diagram__source" aria-label={`${title} (diagram source)`}>{chart.trim()}</pre>
       )}

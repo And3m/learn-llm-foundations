@@ -42,7 +42,7 @@ A usual pipeline has these stages:
   title="The alignment pipeline"
   caption="SFT gives a starting policy. Preference data then trains the policy through a reward model and RL, or directly with DPO. A reference model limits how far the policy moves."
   chart={`
-flowchart LR
+flowchart TB
   B[Pre-trained base model] --> S[SFT on demonstrations]
   S --> R0[Reference policy]
   S --> C[Collect preference comparisons]

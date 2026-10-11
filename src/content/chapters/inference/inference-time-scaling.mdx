@@ -6,7 +6,7 @@ Model quality can become better when you use more compute after training. Infere
   title="Four ways to use more compute at inference time"
   caption="Each method adds a different resource to the request. All four need a way to find the better result, or the added compute gives no benefit."
   chart={`
-flowchart LR
+flowchart TB
   Q[Request] --> C[Context scaling: more evidence]
   Q --> S[Search scaling: more paths]
   Q --> E[Output ensembling: more votes]

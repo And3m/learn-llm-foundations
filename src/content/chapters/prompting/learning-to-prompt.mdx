@@ -30,7 +30,7 @@ Candidates can be different in instruction wording, demonstration selection and 
   title="An automatic prompt-optimization loop"
   caption="The loop proposes prompts, scores them on development data and keeps the best ones. A separate test set gives the final, honest score."
   chart={`
-flowchart LR
+flowchart TB
   S[Seed prompts] --> G[Generate variants]
   G --> E[Score on development set]
   E --> K{Improvement?}
